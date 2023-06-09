@@ -1,15 +1,12 @@
 import { Probot } from "probot";
 
-export = (app: Probot) => {
-  app.on("issues.opened", async (context) => {
-    const issueComment = context.issue({
-      body: "Thanks for opening this issue!",
-    });
-    await context.octokit.issues.createComment(issueComment);
-  });
-  // For more information on building apps:
-  // https://probot.github.io/docs/
+export default (app: Probot) => {
+  app.on("push", async (context) => {
+    console.debug(context)
+    console.debug(`push event handler received a new commmit: ${context.payload.ref}`);
 
-  // To get your app running against GitHub, see:
-  // https://probot.github.io/docs/development/
+    if (context.payload.ref === `refs/heads/${context.payload.repository.default_branch}`) {
+      console.debug(`commit received from main branch: ${context.payload.ref}`);
+    }
+  })
 };
