@@ -1,4 +1,4 @@
-import { Probot, createProbot} from "probot";
+import { Probot, createProbot } from "probot";
 import app from "./index";
 
 const createLambdaFunction = () => {
