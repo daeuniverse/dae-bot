@@ -21,9 +21,12 @@ export default (app: Probot) => {
 
   // on receive star event
   app.on("star.created", async (context: Context<"star.created">) => {
-    app.log.info(`${context.payload.repository.name} received a new star!`);
+    var payload = context.payload.repository;
+    var msg = `Repo: ${payload.name} received a new star! Total stars: ${payload.stargazers_count}`;
+
+    app.log.info(msg);
 
     const tg = new TelegramClient(context as unknown as Context);
-    tg.sendMsg(`${context.payload.repository.name} received a new star!`);
+    tg.sendMsg(msg);
   });
 };
