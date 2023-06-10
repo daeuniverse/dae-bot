@@ -22,7 +22,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "probot": "^12.2.4"
+    "probot": "^12.2.4",
+    "telegram": "^2.17.4"
   },
   "devDependencies": {
     "@types/jest": "^29.0.0",
