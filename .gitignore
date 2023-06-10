@@ -6,3 +6,4 @@ private-key-staging.pem
 .env
 coverage
 lib
+.vercel
