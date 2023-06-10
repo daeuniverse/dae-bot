@@ -18,7 +18,7 @@ export class TelegramClient {
     this.context = context;
   }
 
-  sendMsg(msg: string) {
+  async sendMsg(msg: string) {
     this.chat_ids.map((chat: string) => {
       return this.telegram.sendMessage(chat, msg);
     });
