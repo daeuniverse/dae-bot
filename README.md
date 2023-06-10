@@ -1,6 +1,6 @@
 # dae-bot
 
-> A GitHub App built with [Probot](https://github.com/probot/probot) that daeuniverse probot app
+> A GitHub App built with [Probot](https://github.com/probot/probot) serves to support [daeuniverse](https://github.com/daeuniverse).
 
 ## Setup
 
@@ -9,17 +9,7 @@
 npm install
 
 # Run the bot
-npm start
-```
-
-## Docker
-
-```sh
-# 1. Build container
-docker build -t dae-bot .
-
-# 2. Start container
-docker run -e APP_ID=<app-id> -e PRIVATE_KEY=<pem-value> dae-bot
+npm run debug
 ```
 
 ## Contributing
