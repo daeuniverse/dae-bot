@@ -23,6 +23,7 @@ For more, check out the [Contributing Guide](CONTRIBUTING.md).
 - [probot](https://github.com/probot/probot)
 - [telegraf](https://github.com/telegraf/telegraf)
 - [Build a Telegram Bot using TypeScript, Node.js, and Telegraf and deploy it on Heroku](https://medium.com/geekculture/build-a-telegram-bot-using-typescript-node-js-and-telegraf-and-deploy-it-on-heroku-fcc28c15614f0h)
+- [What is the best way to wrap synchronous functions in to a promise](https://stackoverflow.com/questions/36826592/what-is-the-best-way-to-wrap-synchronous-functions-in-to-a-promise)
 
 ## License
 
