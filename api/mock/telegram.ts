@@ -1,20 +1,14 @@
-import { Context } from "probot";
 import { Telegram } from "telegraf";
 
 export class TelegramClient {
   chat_ids: string[];
   token: string;
   telegram: Telegram;
-  context: Context;
 
-  constructor(context: Context) {
+  constructor() {
     this.token = process.env.TELEGRAM_BOT_TOKEN as string;
-    this.chat_ids = [
-      process.env.TELEGRAM_GITHUB_CHANNEL_ID as string,
-      process.env.TELEGRAM_DAEUNIVERSE_CHANNEL_ID as string,
-    ];
+    this.chat_ids = [process.env.TELEGRAM_GITHUB_CHANNEL_ID as string];
     this.telegram = new Telegram(this.token);
-    this.context = context;
   }
 
   async sendMsg(msg: string) {
@@ -23,3 +17,11 @@ export class TelegramClient {
     });
   }
 }
+
+export default async (req, res) => {
+  const tg = new TelegramClient();
+  await tg.sendMsg("health: ok!");
+  res.statusCode = 200;
+  res.setHeader("Content-Type", "application/json");
+  res.json({ result: "ok!" });
+};
