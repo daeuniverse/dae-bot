@@ -1,0 +1,9 @@
+# Ignore everything (folders and files) on root only
+/*
+!api
+!src
+!package.json
+!package-lock.json
+!jest.config.js
+!tsconfig.json
+!vercel.json
