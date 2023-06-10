@@ -1,6 +1,7 @@
 node_modules
 npm-debug.log
 private-key.pem
+private-key-staging.pem
 !mock-cert.pem
 .env
 coverage
