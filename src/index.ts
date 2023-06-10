@@ -6,12 +6,13 @@ export default (app: Probot) => {
 
   // on receive push event
   app.on("push", async (context: Context<"push">) => {
-    app.log.debug(`received a push event: ${context.payload?.head_commit}`);
+    var head_commit = JSON.stringify(context.payload?.head_commit);
+    app.log.info(`received a push event: ${head_commit}`);
   });
 
   // on receive issue event
   app.on("issues.opened", async (context: Context<"issues.opened">) => {
-    app.log.debug(`received an issue event: ${context.payload.issue}`);
+    app.log.info(`received an issue event: ${context.payload.issue}`);
     const comment = context.issue({
       body: "Thanks for opening this issue!",
     });
@@ -20,7 +21,7 @@ export default (app: Probot) => {
 
   // on receive star event
   app.on("star.created", async (context: Context<"star.created">) => {
-    app.log.debug(`${context.payload.repository.name} received a new star!`);
+    app.log.info(`${context.payload.repository.name} received a new star!`);
 
     const tg = new TelegramClient(context as unknown as Context);
     tg.sendMsg(`${context.payload.repository.name} received a new star!`);
