@@ -1,5 +1,6 @@
 import { Context } from "probot";
 import { Telegram } from "telegraf";
+import { awesome_sticker } from "./constant";
 
 export class TelegramClient {
   chat_ids: string[];
@@ -18,8 +19,21 @@ export class TelegramClient {
   }
 
   async sendMsg(msg: string) {
-    this.chat_ids.map((chat: string) => {
-      return this.telegram.sendMessage(chat, msg);
+    var promises = this.chat_ids.map((chat: string) => {
+      return new Promise((resolve, reject) => {
+        try {
+          resolve(
+            this.telegram
+              .sendMessage(chat, msg)
+              .then(() => this.telegram.sendSticker(chat, awesome_sticker))
+          );
+        } catch (err) {
+          console.log(err);
+          reject(err);
+        }
+      });
     });
+
+    await Promise.all(promises);
   }
 }
