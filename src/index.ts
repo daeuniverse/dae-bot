@@ -1,5 +1,6 @@
 import { Context, Probot } from "probot";
 import { TelegramClient } from "./telegram";
+import kv from "@vercel/kv";
 
 export default (app: Probot) => {
   app.log("The app is loaded successfully!");
@@ -22,10 +23,14 @@ export default (app: Probot) => {
   // on receive star event
   app.on("star.created", async (context: Context<"star.created">) => {
     var payload = context.payload.repository;
-    var msg = `Repo: ${payload.name} received a new star! Total stars: ${payload.stargazers_count}`;
-    app.log.info(msg);
+    const actualStars = (await kv.get(`${payload.name}.stars`)) as number;
+    if (payload.stargazers_count > actualStars) {
+      await kv.set(`${payload.name}.stars`, payload.stargazers_count);
+      var msg = `Repo: ${payload.name} received a new star! Total stars: ${payload.stargazers_count}`;
+      app.log.info(msg);
 
-    const tg = new TelegramClient(context as unknown as Context);
-    await tg.sendMsg(msg);
+      const tg = new TelegramClient(context as unknown as Context);
+      await tg.sendMsg(msg);
+    }
   });
 };
