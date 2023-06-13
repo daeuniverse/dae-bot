@@ -17,15 +17,7 @@ export default (app: Probot) => {
     const comment = context.issue({
       body: "Thanks for opening this issue!",
     });
-    const msg = `${JSON.stringify({
-      event: "issues.opened",
-      sender: context.payload.sender,
-    })}`;
-    const tg = new TelegramClient(context as unknown as Context);
-    await tg.sendMsg(msg, [
-      process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
-    ]);
-    return await context.octokit.issues.createComment(comment);
+    await context.octokit.issues.createComment(comment);
   });
 
   // on receive star event
