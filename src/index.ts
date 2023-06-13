@@ -17,6 +17,14 @@ export default (app: Probot) => {
     const comment = context.issue({
       body: "Thanks for opening this issue!",
     });
+    const msg = `${JSON.stringify({
+      event: "issues.opened",
+      sender: context.payload.sender,
+    })}`;
+    const tg = new TelegramClient(context as unknown as Context);
+    await tg.sendMsg(msg, [
+      process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+    ]);
     return context.octokit.issues.createComment(comment);
   });
 
@@ -25,16 +33,23 @@ export default (app: Probot) => {
     const payload = context.payload.repository;
     const actualStars = await kv.get(`${payload.name}.stars`);
     if (!actualStars) {
-      app.log.error("key not exists.");
+      app.log.error("key does not exist");
       return;
     }
     if (payload.stargazers_count > actualStars) {
       await kv.set(`${payload.name}.stars`, payload.stargazers_count);
-      const msg = `Repo: ${payload.name} received a new star! Total stars: ${payload.stargazers_count}`;
+      const msg = `${JSON.stringify({
+        event: "star.created",
+        repo: payload.name,
+        total_stars: payload.stargazers_count,
+        sender: context.payload.sender,
+      })}`;
       app.log.info(msg);
 
       const tg = new TelegramClient(context as unknown as Context);
-      await tg.sendMsg(msg);
+      await tg.sendMsg(msg, [
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+      ]);
     }
   });
 };
