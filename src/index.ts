@@ -12,7 +12,7 @@ export default (app: Probot) => {
   });
 
   // on receive issue event
-  app.on("issues.opened", async (context: Context<"issues.opened">) => {
+  app.on("issues.reopened", async (context: Context<"issues.reopened">) => {
     app.log.info(`received an issue event: ${context.payload.issue}`);
     const comment = context.issue({
       body: "Thanks for opening this issue!",
@@ -25,7 +25,7 @@ export default (app: Probot) => {
     await tg.sendMsg(msg, [
       process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
     ]);
-    return context.octokit.issues.createComment(comment);
+    return await context.octokit.issues.createComment(comment);
   });
 
   // on receive star event

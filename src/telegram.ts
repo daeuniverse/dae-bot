@@ -16,7 +16,11 @@ export class TelegramClient {
     var promises = channels.map((chat: string) => {
       return new Promise((resolve, reject) => {
         try {
-          resolve(this.telegram.sendMessage(chat, msg));
+          resolve(
+            this.telegram.sendMessage(chat, msg, {
+              disable_web_page_preview: true,
+            })
+          );
         } catch (err) {
           console.log(err);
           reject(err);
