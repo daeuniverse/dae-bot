@@ -23,7 +23,11 @@ export default (app: Probot) => {
   // on receive star event
   app.on("star.created", async (context: Context<"star.created">) => {
     const payload = context.payload.repository;
-    const actualStars = Number.parseInt(await kv.get(`${payload.name}.stars`));
+    const actualStars = await kv.get(`${payload.name}.stars`);
+    if (!actualStars) {
+      app.log.error("key not exists.");
+      return;
+    }
     if (payload.stargazers_count > actualStars) {
       await kv.set(`${payload.name}.stars`, payload.stargazers_count);
       const msg = `Repo: ${payload.name} received a new star! Total stars: ${payload.stargazers_count}`;
