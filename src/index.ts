@@ -22,11 +22,11 @@ export default (app: Probot) => {
 
   // on receive star event
   app.on("star.created", async (context: Context<"star.created">) => {
-    var payload = context.payload.repository;
+    const payload = context.payload.repository;
     const actualStars = Number.parseInt(await kv.get(`${payload.name}.stars`));
     if (payload.stargazers_count > actualStars) {
       await kv.set(`${payload.name}.stars`, payload.stargazers_count);
-      var msg = `Repo: ${payload.name} received a new star! Total stars: ${payload.stargazers_count}`;
+      const msg = `Repo: ${payload.name} received a new star! Total stars: ${payload.stargazers_count}`;
       app.log.info(msg);
 
       const tg = new TelegramClient(context as unknown as Context);
