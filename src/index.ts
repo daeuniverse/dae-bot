@@ -12,7 +12,7 @@ export default (app: Probot) => {
   });
 
   // on receive issue event
-  app.on("issues.reopened", async (context: Context<"issues.reopened">) => {
+  app.on("issues.opened", async (context: Context<"issues.opened">) => {
     app.log.info(`received an issue event: ${context.payload.issue}`);
     const comment = context.issue({
       body: "Thanks for opening this issue!",
