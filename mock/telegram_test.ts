@@ -1,15 +1,14 @@
-import { Context } from "probot";
 import { Telegram } from "telegraf";
+// import { awesome_sticker } from "../src/constant";
+import dotenv from "dotenv";
 
-export class TelegramClient {
+class TelegramClient {
   token: string;
   telegram: Telegram;
-  context: Context;
 
-  constructor(context: Context) {
+  constructor() {
     this.token = process.env.TELEGRAM_BOT_TOKEN as string;
     this.telegram = new Telegram(this.token);
-    this.context = context;
   }
 
   async sendMsg(msg: string, channels: string[]) {
@@ -27,3 +26,13 @@ export class TelegramClient {
     await Promise.all(promises);
   }
 }
+
+const main = async () => {
+  dotenv.config({ path: ".env" });
+  const tg = new TelegramClient();
+  await tg.sendMsg("nihao!", [
+    process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+  ]);
+};
+
+main();
