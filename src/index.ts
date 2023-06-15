@@ -30,12 +30,7 @@ export default (app: Probot) => {
     }
     if (payload.stargazers_count > actualStars) {
       await kv.set(`${payload.name}.stars`, payload.stargazers_count);
-      const msg = `${JSON.stringify({
-        event: "star.created",
-        repo: payload.name,
-        total_stars: payload.stargazers_count,
-        sender: context.payload.sender,
-      })}`;
+      const msg = `Repo: ${payload.name} received a new star from @${context.payload.sender.login}! Total stars: ${payload.stargazers_count}`;
       app.log.info(msg);
 
       const tg = new TelegramClient(context as unknown as Context);
