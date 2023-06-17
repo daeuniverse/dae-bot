@@ -31,28 +31,31 @@ export default (app: Probot) => {
       // 1.2 trigger daed sync-upstream-source workflow
       // https://octokit.github.io/rest.js/v18#actions-create-workflow-dispatch
       // https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#create-a-workflow-dispatch-event
-      await context.octokit.actions.createWorkflowDispatch({
-        owner: metadata.owner,
-        repo: "daed",
-        workflow_id: "sync-upstream-source.yml",
-        ref: "main",
-        inputs: {
-          "wing-head": "HEAD",
-          "wing-sync-message": "chore: upgrade dae-wing",
-        },
-      });
+      const latestRunUrl = await context.octokit.actions
+        .createWorkflowDispatch({
+          owner: metadata.owner,
+          repo: "daed",
+          workflow_id: "sync-upstream-source.yml",
+          ref: "main",
+          inputs: {
+            "wing-head": "HEAD",
+            "wing-sync-message": "chore: upgrade dae-wing",
+          },
+        })
+        .then(async () => {
+          return await context.octokit.actions
+            .listWorkflowRuns({
+              owner: metadata.owner,
+              repo: "daed",
+              workflow_id: "sync-upstream-source.yml",
+              per_page: 1,
+            })
+            .then((res) => res.data.workflow_runs[0].html_url);
+        });
 
       // 1.3 get latest workflow run metadata
       // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
       // https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#create-a-workflow-dispatch-event
-      const latestRunUrl = await context.octokit.actions
-        .listWorkflowRuns({
-          owner: metadata.owner,
-          repo: "daed",
-          workflow_id: "sync-upstream-source.yml",
-          per_page: 1,
-        })
-        .then((res) => res.data.workflow_runs[0].html_url);
 
       // 1.4 audit event
       const msg = `🏗️ a new commit was pushed to ${metadata.repo} (${metadata.default_branch}); dispatched sync-upstream-source workflow for daed; url: ${latestRunUrl}`;
