@@ -15,8 +15,8 @@ export default (app: Probot) => {
 
     // on daed.sync-upstream event
     if (
-      context.payload.ref == "refs/heads/test-webhook" &&
-      ["dae", "dae-wing"].includes(context.payload.repository.name)
+      context.payload.ref == "refs/heads/main" &&
+      context.payload.repository.name == "dae-wing"
     ) {
       // 1.1 construct metadata from payload
       var metadata = {
