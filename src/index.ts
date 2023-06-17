@@ -42,8 +42,8 @@ export default (app: Probot) => {
             "wing-sync-message": "chore: upgrade dae-wing",
           },
         })
-        .then(async () => {
-          return await context.octokit.actions
+        .then(() => {
+          return context.octokit.actions
             .listWorkflowRuns({
               owner: metadata.owner,
               repo: "daed",
