@@ -36,9 +36,10 @@ export default (app: Probot) => {
           owner: metadata.owner,
           repo: "daed",
           workflow_id: "sync-upstream-source.yml",
-          ref: "main",
+          ref: metadata.default_branch,
           inputs: {
-            "wing-head": "HEAD",
+            "wing-head": metadata.default_branch,
+            "pr-base-branch": metadata.default_branch,
             "wing-sync-message": "chore: upgrade dae-wing",
           },
         })
