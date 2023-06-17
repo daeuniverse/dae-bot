@@ -54,7 +54,7 @@ export default (app: Probot) => {
         })
         .then((res) => res.data.workflow_runs[0].html_url);
 
-      // 1.3 audit event
+      // 1.4 audit event
       const msg = `🏗️ a new commit was pushed to ${metadata.repo} (${metadata.default_branch}); dispatched sync-upstream-source workflow for daed; url: ${latestRunUrl}`;
       app.log.info(msg);
 
