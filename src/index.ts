@@ -127,10 +127,21 @@ export default (app: Probot) => {
 
       // 1.1 automatically add label(s) to pull_request
       // https://octokit.github.io/rest.js/v18#issues-add-labels
-      const defaultLables = ["fix", "feature", "patch", "ci", "optimize", "chore"];
-      var labels = defaultLables.filter((label: string) =>
-        metadata.pull_request.title.includes(label)
-      );
+      const defaultLables = [
+        "fix",
+        "feat",
+        "feature",
+        "patch",
+        "ci",
+        "optimize",
+        "chore",
+      ];
+      var labels = defaultLables
+        .filter((label: string) => metadata.pull_request.title.includes(label))
+        .map((item) => {
+          if (item == "feat") item = "feature";
+          return item;
+        });
 
       if (labels.length > 0) {
         msg = `🏷 PR - [#${metadata.pull_request.number}](${
