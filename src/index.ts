@@ -336,7 +336,7 @@ export default (app: Probot) => {
       await kv.set(key, JSON.stringify(metadata));
 
       // 1.2 audit event
-      msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
+      msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
 
       app.log.info(msg);
 
