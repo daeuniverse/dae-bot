@@ -1,15 +1,6 @@
 import { Probot, createProbot } from "probot";
 import app from "./index";
 
-export default () => {
-  return async (event: any) => {
-    const probot: Probot = createProbot();
-
-    probot.load(app);
-    return await webhookHandler(probot, event);
-  };
-};
-
 const webhookHandler = async (probot: Probot, event: any) => {
   try {
     const headersLowerCase = Object.fromEntries(
@@ -34,9 +25,19 @@ const webhookHandler = async (probot: Probot, event: any) => {
     };
   } catch (error: any) {
     console.error(error);
+
     return {
       statusCode: error.status || 500,
       error: "Ooops, something goes wrong",
     };
   }
+};
+
+export default () => {
+  return async (event: any) => {
+    const probot: Probot = createProbot();
+    await probot.load(app);
+
+    return await webhookHandler(probot, event);
+  };
 };
