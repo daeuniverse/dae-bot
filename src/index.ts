@@ -139,13 +139,6 @@ export default (app: Probot) => {
           head: metadata.pull_request.ref,
           base: metadata.default_branch,
         }),
-        // 1.1.2 get timestamp from head commit of the merge_base_branch
-        // https://octokit.github.io/rest.js/v18#git-get-commit
-        context.octokit.repos.getCommit({
-          repo: metadata.repo,
-          owner: metadata.owner,
-          ref: metadata.default_branch,
-        }),
         // 1.1.2 get timestamp from head commit of the pr_branch
         // https://octokit.github.io/rest.js/v18#git-get-commit
         context.octokit.repos.getCommit({
@@ -155,15 +148,14 @@ export default (app: Probot) => {
         }),
       ]);
 
-      var [commits_diff, merge_base_commit, pr_commit] = commits;
-
+      var [commits_diff, pr_commit] = commits;
       var status = commits_diff.data.status;
-      var mbCommitterDate = merge_base_commit.data.commit.committer
+      var mbCommitterDate = commits_diff.data.merge_base_commit.commit.committer
         ?.date as string;
       var prCommitterDate = pr_commit.data.commit.committer?.date as string;
       var lastPRCommiter = pr_commit.data.commit.committer?.name as string;
 
-      // 1.2 compare timestamp, if mergeBaseDateAgeTimeout > pr_branch_date; then merge remote HEAD branch to the pr branch
+      // 1.2 compare timestamp, if mergeBaseDateAgeTimeout > pr_branch_date && status == diverged; then merge remote HEAD branch to the pr branch
       const maxDiff = Duration.parse(process.env.PR_MAX_AGE as string);
 
       var mergeBaseDateAgeTimeout = Duration.end(
@@ -171,13 +163,13 @@ export default (app: Probot) => {
         new Date(mbCommitterDate)
       );
       var prBranchDate = new Date(prCommitterDate);
-      var isBranchUpToDate =
+      var exceedAgeTimeout =
         mergeBaseDateAgeTimeout > prBranchDate && status == "ahead";
 
       app.log.info(
         JSON.stringify({
           status,
-          isBranchUpToDate,
+          exceedAgeTimeout,
           lastPRCommiter,
           mergeBaseDateAgeTimeout,
           prBranchDate,
@@ -185,7 +177,7 @@ export default (app: Probot) => {
       );
 
       if (
-        !isBranchUpToDate &&
+        !exceedAgeTimeout &&
         lastPRCommiter != "GitHub" &&
         status == "diverged"
       ) {
