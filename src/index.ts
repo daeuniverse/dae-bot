@@ -1,4 +1,5 @@
 import { Context, Probot } from "probot";
+import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
 import * as Duration from "iso8601-duration";
 import kv from "@vercel/kv";
@@ -99,6 +100,7 @@ export default (app: Probot) => {
     }
   });
 
+  // on receive pull_request.opened event
   app.on(
     "pull_request.opened",
     async (context: Context<"pull_request.opened">) => {
@@ -297,6 +299,51 @@ export default (app: Probot) => {
           process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
         ]);
       }
+    }
+  );
+
+  // on pull_request.merged event
+  app.on(
+    "pull_request.closed",
+    async (context: Context<"pull_request.closed">) => {
+      var metadata = {
+        repo: context.payload.repository.name,
+        owner: context.payload.organization?.login as string,
+        default_branch: context.payload.repository.default_branch,
+        html_url: context.payload.repository.html_url,
+        pull_request: {
+          ref: context.payload.pull_request.head.ref,
+          title: context.payload.pull_request.title,
+          author: context.payload.pull_request.user.login,
+          number: context.payload.pull_request.number,
+          updated_at: context.payload.pull_request.updated_at,
+          html_url: context.payload.pull_request.html_url,
+          merged: context.payload.pull_request.merged,
+        },
+      };
+
+      app.log.info(
+        `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
+      );
+
+      var msg = "";
+
+      // case_#1:store pr metrics to kv
+      // 1.1 store pr metrics data to kv
+      var key = `pr.merged.${uuidv4().slice(0, 7)}.${
+        metadata.pull_request.number
+      }`;
+      await kv.set(key, JSON.stringify(metadata));
+
+      // 1.2 audit event
+      msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
+
+      app.log.info(msg);
+
+      const tg = new TelegramClient(context as unknown as Context);
+      await tg.sendMsg(msg, [
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+      ]);
     }
   );
 };
