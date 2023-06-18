@@ -102,7 +102,6 @@ export default (app: Probot) => {
   app.on(
     "pull_request.opened",
     async (context: Context<"pull_request.opened">) => {
-      // case_#1: automatically assign label if not present, default label should align with "kind" as part of the pr title
       var metadata = {
         repo: context.payload.repository.name,
         owner: context.payload.organization?.login as string,
@@ -122,6 +121,10 @@ export default (app: Probot) => {
         `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
       );
 
+      var msg = "";
+
+      // case_#1: automatically assign label if not present, default label should align with "kind" as part of the pr title
+
       // 1.1 automatically add label(s) to pull_request
       // https://octokit.github.io/rest.js/v18#issues-add-labels
       const defaultLables = ["fix", "feature", "patch", "ci"];
@@ -130,12 +133,11 @@ export default (app: Probot) => {
       );
 
       if (labels.length > 0) {
-        var msg = `🏷 PR - [#${metadata.pull_request.number}](${
+        msg = `🏷 PR - [#${metadata.pull_request.number}](${
           metadata.pull_request.html_url
         }) in ${metadata.repo} is missing labels; added ${JSON.stringify(
           labels
         )}`;
-        app.log.info(msg);
 
         await context.octokit.issues.addLabels({
           owner: metadata.owner,
@@ -144,12 +146,33 @@ export default (app: Probot) => {
           labels: labels,
         });
 
-        // 1.5 audit event
+        // 1.2 audit event
+        app.log.info(msg);
+
         const tg = new TelegramClient(context as unknown as Context);
         await tg.sendMsg(msg, [
           process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
         ]);
       }
+
+      // case_#2: automatically assign assignee if not present
+      // 1.1 assign pull_request author to be the default assignee
+      await context.octokit.issues.addAssignees({
+        owner: metadata.owner,
+        repo: metadata.repo,
+        issue_number: metadata.pull_request.number,
+        assignees: [metadata.pull_request.author],
+      });
+
+      msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} is missing assignees; assign @${metadata.pull_request.author} as the default assignee`;
+
+      app.log.info(msg);
+
+      // 1.2 audit event
+      const tg = new TelegramClient(context as unknown as Context);
+      await tg.sendMsg(msg, [
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+      ]);
     }
   );
 
@@ -174,6 +197,8 @@ export default (app: Probot) => {
       app.log.info(
         `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
       );
+
+      var msg = "";
 
       // TODO:
       // case_#1: check assignee is present, if not set as pr author
@@ -233,7 +258,7 @@ export default (app: Probot) => {
         lastPRCommiter != "GitHub" &&
         status == "diverged"
       ) {
-        const msg = `🚗 branch ${metadata.pull_request.ref} is currently out-of-sync in ${metadata.repo}; automatically merge origin/${metadata.default_branch} to keep it up-to-date; url: ${metadata.pull_request.html_url}`;
+        msg = `🚗 branch ${metadata.pull_request.ref} is currently out-of-sync in ${metadata.repo}; automatically merge origin/${metadata.default_branch} to keep it up-to-date; url: ${metadata.pull_request.html_url}`;
 
         // 1.3 write a comment to pr_branch if it is out-of-sync
         // https://octokit.github.io/rest.js/v18#pulls-create-review-comment
