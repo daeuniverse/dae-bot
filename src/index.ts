@@ -1,15 +1,15 @@
+import kv from "@vercel/kv";
+import * as Duration from "iso8601-duration";
 import { Context, Probot } from "probot";
 import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
-import * as Duration from "iso8601-duration";
-import kv from "@vercel/kv";
 
 export default (app: Probot) => {
   app.log("The app is loaded successfully!");
 
   // on receive push event
   app.on("push", async (context: Context<"push">) => {
-    var head_commit = JSON.stringify(context.payload?.head_commit);
+    const head_commit = JSON.stringify(context.payload?.head_commit);
     app.log.info(`received a push event: ${head_commit}`);
 
     app.log.info(context.payload.ref);
@@ -21,7 +21,7 @@ export default (app: Probot) => {
       context.payload.repository.name == "dae-wing"
     ) {
       // 1.1 construct metadata from payload
-      var metadata = {
+      const metadata = {
         repo: context.payload.repository.name,
         owner: context.payload.organization?.login as string,
         author: context.payload.sender.login,
@@ -45,16 +45,16 @@ export default (app: Probot) => {
             "wing-sync-message": "chore: upgrade dae-wing",
           },
         })
-        .then(() => {
-          return context.octokit.actions
+        .then(() =>
+          context.octokit.actions
             .listWorkflowRuns({
               owner: metadata.owner,
               repo: "daed",
               workflow_id: "sync-upstream-source.yml",
               per_page: 1,
             })
-            .then((res) => res.data.workflow_runs[0].html_url);
-        });
+            .then((res) => res.data.workflow_runs[0].html_url)
+        );
 
       // 1.3 get latest workflow run metadata
       // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
@@ -83,12 +83,13 @@ export default (app: Probot) => {
   // on receive star event
   app.on("star.created", async (context: Context<"star.created">) => {
     const payload = context.payload.repository;
-    const actualStars = await kv.get(`${payload.name}.stars`);
+    const actualStars = await kv.get<string>(`${payload.name}.stars`);
     if (!actualStars) {
       app.log.error("key does not exist");
       return;
     }
-    if (payload.stargazers_count > actualStars) {
+
+    if (payload.stargazers_count > Number.parseInt(actualStars)) {
       await kv.set(`${payload.name}.stars`, payload.stargazers_count);
       const msg = `⭐ Repo: ${payload.name} received a new star from [@${context.payload.sender.login}](${context.payload.sender.html_url})! Total stars: ${payload.stargazers_count}`;
       app.log.info(msg);
@@ -104,7 +105,7 @@ export default (app: Probot) => {
   app.on(
     "pull_request.opened",
     async (context: Context<"pull_request.opened">) => {
-      var metadata = {
+      const metadata = {
         repo: context.payload.repository.name,
         owner: context.payload.organization?.login as string,
         default_branch: context.payload.repository.default_branch,
@@ -123,8 +124,6 @@ export default (app: Probot) => {
         `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
       );
 
-      var msg = "";
-
       // case_#1: automatically assign label if not present, default label should align with "kind" as part of the pr title
 
       // 1.1 automatically add label(s) to pull_request
@@ -138,7 +137,8 @@ export default (app: Probot) => {
         "optimize",
         "chore",
       ];
-      var labels = defaultLables
+
+      const labels = defaultLables
         .filter((label: string) => metadata.pull_request.title.includes(label))
         .map((item) => {
           if (item == "feat") item = "feature";
@@ -146,7 +146,7 @@ export default (app: Probot) => {
         });
 
       if (labels.length > 0) {
-        msg = `🏷 PR - [#${metadata.pull_request.number}](${
+        const msg = `🏷 PR - [#${metadata.pull_request.number}](${
           metadata.pull_request.html_url
         }) in ${metadata.repo} is missing labels; added ${JSON.stringify(
           labels
@@ -177,7 +177,7 @@ export default (app: Probot) => {
         assignees: [metadata.pull_request.author],
       });
 
-      msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} is missing assignees; assign @${metadata.pull_request.author} as the default assignee`;
+      const msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} is missing assignees; assign @${metadata.pull_request.author} as the default assignee`;
 
       app.log.info(msg);
 
@@ -193,7 +193,7 @@ export default (app: Probot) => {
   app.on(
     "pull_request.synchronize",
     async (context: Context<"pull_request.synchronize">) => {
-      var metadata = {
+      const metadata = {
         repo: context.payload.repository.name,
         owner: context.payload.organization?.login as string,
         default_branch: context.payload.repository.default_branch,
@@ -211,8 +211,6 @@ export default (app: Probot) => {
         `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
       );
 
-      var msg = "";
-
       // TODO:
       // case_#1: check assignee is present, if not set as pr author
 
@@ -220,7 +218,7 @@ export default (app: Probot) => {
       // https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch
 
       // 1.1 get timestamps of the head commit from both the merge_base_branch and pr_branch
-      var commits = await Promise.all([
+      const commits = await Promise.all([
         // 1.1.1 check if merge_base_branch and pr_branch are diverged
         // https://octokit.github.io/rest.js/v18#repos-compare-commits
         context.octokit.repos.compareCommits({
@@ -238,22 +236,22 @@ export default (app: Probot) => {
         }),
       ]);
 
-      var [commits_diff, pr_commit] = commits;
-      var status = commits_diff.data.status;
-      var mbCommitterDate = commits_diff.data.merge_base_commit.commit.committer
-        ?.date as string;
-      var prCommitterDate = pr_commit.data.commit.committer?.date as string;
-      var lastPRCommiter = pr_commit.data.commit.committer?.name as string;
+      const [commits_diff, pr_commit] = commits;
+      const status = commits_diff.data.status;
+      const mbCommitterDate = commits_diff.data.merge_base_commit.commit
+        .committer?.date as string;
+      const prCommitterDate = pr_commit.data.commit.committer?.date as string;
+      const lastPRCommiter = pr_commit.data.commit.committer?.name as string;
 
       // 1.2 compare timestamp, if mergeBaseDateAgeTimeout > pr_branch_date && status == diverged; then merge remote HEAD branch to the pr branch
       const maxDiff = Duration.parse(process.env.PR_MAX_AGE as string);
 
-      var mergeBaseDateAgeTimeout = Duration.end(
+      const mergeBaseDateAgeTimeout = Duration.end(
         maxDiff,
         new Date(mbCommitterDate)
       );
-      var prBranchDate = new Date(prCommitterDate);
-      var exceedAgeTimeout =
+      const prBranchDate = new Date(prCommitterDate);
+      const exceedAgeTimeout =
         mergeBaseDateAgeTimeout > prBranchDate && status == "ahead";
 
       app.log.info(
@@ -271,7 +269,7 @@ export default (app: Probot) => {
         lastPRCommiter != "GitHub" &&
         status == "diverged"
       ) {
-        msg = `🚗 PR [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is currently out-of-sync in ${metadata.repo}; automatically merge origin/${metadata.default_branch} to keep it up-to-date; url: ${metadata.pull_request.html_url}`;
+        const msg = `🚗 PR [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is currently out-of-sync in ${metadata.repo}; automatically merge origin/${metadata.default_branch} to keep it up-to-date; url: ${metadata.pull_request.html_url}`;
 
         // 1.3 write a comment to pr_branch if it is out-of-sync
         // https://octokit.github.io/rest.js/v18#pulls-create-review-comment
@@ -306,7 +304,7 @@ export default (app: Probot) => {
   app.on(
     "pull_request.closed",
     async (context: Context<"pull_request.closed">) => {
-      var metadata = {
+      const metadata = {
         repo: context.payload.repository.name,
         owner: context.payload.organization?.login as string,
         default_branch: context.payload.repository.default_branch,
@@ -326,17 +324,15 @@ export default (app: Probot) => {
         `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
       );
 
-      var msg = "";
-
       // case_#1:store pr metrics to kv
       // 1.1 store pr metrics data to kv
-      var key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
+      const key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
         metadata.pull_request.number
       }`;
       await kv.set(key, JSON.stringify(metadata));
 
       // 1.2 audit event
-      msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
+      const msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
 
       app.log.info(msg);
 
