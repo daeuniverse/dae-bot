@@ -99,18 +99,64 @@ export default (app: Probot) => {
     }
   });
 
+  app.on(
+    "pull_request.opened",
+    async (context: Context<"pull_request.opened">) => {
+      // case_#1: automatically assign label if not present, default label should align with "kind" as part of the pr title
+      var metadata = {
+        repo: context.payload.repository.name,
+        owner: context.payload.organization?.login as string,
+        default_branch: context.payload.repository.default_branch,
+        html_url: context.payload.repository.html_url,
+        pull_request: {
+          ref: context.payload.pull_request.head.ref,
+          title: context.payload.pull_request.title,
+          author: context.payload.pull_request.user.login,
+          number: context.payload.pull_request.number,
+          updated_at: context.payload.pull_request.updated_at,
+          html_url: context.payload.pull_request.html_url,
+        },
+      };
+
+      app.log.info(
+        `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
+      );
+
+      // 1.1 automatically add label(s) to pull_request
+      // https://octokit.github.io/rest.js/v18#issues-add-labels
+      const defaultLables = ["fix", "feature", "patch", "ci"];
+      var labels = defaultLables.filter((label: string) =>
+        metadata.pull_request.title.includes(label)
+      );
+
+      if (labels.length > 0) {
+        var msg = `🏷 PR - [#${metadata.pull_request.number}](${
+          metadata.pull_request.html_url
+        }) in ${metadata.repo} is missing labels; added ${JSON.stringify(
+          labels
+        )}`;
+        app.log.info(msg);
+
+        await context.octokit.issues.addLabels({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          issue_number: metadata.pull_request.number,
+          labels: labels,
+        });
+
+        // 1.5 audit event
+        const tg = new TelegramClient(context as unknown as Context);
+        await tg.sendMsg(msg, [
+          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+        ]);
+      }
+    }
+  );
+
   // on pull_request.synchronize event
   app.on(
     "pull_request.synchronize",
     async (context: Context<"pull_request.synchronize">) => {
-      // TODO:
-      // case_#1: check assignee is present, if not set as pr author
-
-      // TODO:
-      // case_#2: automatically assign label if not present, default label should align with "kind" as part of the pr title
-
-      // case_#3: check if pr_branch is up-to-date, if not, merge remote HEAD branch to the pr branch
-      // https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch
       var metadata = {
         repo: context.payload.repository.name,
         owner: context.payload.organization?.login as string,
@@ -128,6 +174,12 @@ export default (app: Probot) => {
       app.log.info(
         `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
       );
+
+      // TODO:
+      // case_#1: check assignee is present, if not set as pr author
+
+      // case_#3: check if pr_branch is up-to-date, if not, merge remote HEAD branch to the pr branch
+      // https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch
 
       // 1.1 get timestamps of the head commit from both the merge_base_branch and pr_branch
       var commits = await Promise.all([
