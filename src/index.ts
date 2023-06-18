@@ -269,7 +269,7 @@ export default (app: Probot) => {
         lastPRCommiter != "GitHub" &&
         status == "diverged"
       ) {
-        msg = `🚗 branch ${metadata.pull_request.ref} is currently out-of-sync in ${metadata.repo}; automatically merge origin/${metadata.default_branch} to keep it up-to-date; url: ${metadata.pull_request.html_url}`;
+        msg = `🚗 PR [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is currently out-of-sync in ${metadata.repo}; automatically merge origin/${metadata.default_branch} to keep it up-to-date; url: ${metadata.pull_request.html_url}`;
 
         // 1.3 write a comment to pr_branch if it is out-of-sync
         // https://octokit.github.io/rest.js/v18#pulls-create-review-comment
