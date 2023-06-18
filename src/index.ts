@@ -330,13 +330,13 @@ export default (app: Probot) => {
 
       // case_#1:store pr metrics to kv
       // 1.1 store pr metrics data to kv
-      var key = `pr.merged.${uuidv4().slice(0, 7)}.${
+      var key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
         metadata.pull_request.number
       }`;
       await kv.set(key, JSON.stringify(metadata));
 
       // 1.2 audit event
-      msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
+      msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
 
       app.log.info(msg);
 
