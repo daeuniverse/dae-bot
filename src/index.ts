@@ -330,7 +330,7 @@ export default (app: Probot) => {
 
       // case_#1:store pr metrics to kv
       // 1.1 store pr metrics data to kv
-      var key = `pr.merged.${uuidv4().slice(0, 7)}.${
+      var key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
         metadata.pull_request.number
       }`;
       await kv.set(key, JSON.stringify(metadata));
