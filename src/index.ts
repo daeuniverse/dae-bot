@@ -23,7 +23,7 @@ export default (app: Probot) => {
     ) {
       // 1.1 construct metadata from payload
       const metadata = {
-        repo: "daed-1",
+        repo: "daed",
         owner: context.payload.organization?.login as string,
         author: context.payload.sender.login,
         default_branch: context.payload.repository.default_branch,
@@ -72,7 +72,7 @@ export default (app: Probot) => {
     // case_#3 create a pull_request when branch sync-upstream is created and pushed to daed (remote)
     if (
       context.payload.before == "0000000000000000000000000000000000000000" &&
-      context.payload.repository.name == "daed-1" &&
+      context.payload.repository.name == "daed" &&
       context.payload.ref.split("/")[2] == daedSyncBranch
     ) {
       // 1.1 construct metadata from payload
