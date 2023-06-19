@@ -19,7 +19,7 @@ export default (app: Probot) => {
     const daedSyncBranch = "sync-upstream";
     if (
       context.payload.ref == "refs/heads/main" &&
-      context.payload.repository.name == "ci-bot-experiment"
+      context.payload.repository.name == "dae-wing"
     ) {
       // 1.1 construct metadata from payload
       const metadata = {
