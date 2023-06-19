@@ -18,7 +18,7 @@ export default (app: Probot) => {
     // case_#1 trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main
     if (
       context.payload.ref == "refs/heads/main" &&
-      context.payload.repository.name == "dae-wing"
+      context.payload.repository.name == "ci-bot-experiment"
     ) {
       // 1.1 construct metadata from payload
       const metadata = {
@@ -68,7 +68,7 @@ export default (app: Probot) => {
       ]);
     }
 
-    // case_#2 create a pull_request when branch sync-upstream is created and pushed to daed (remote)
+    // case_#3 create a pull_request when branch sync-upstream is created and pushed to daed (remote)
     if (
       context.payload.before == "0000000000000000000000000000000000000000" &&
       context.payload.repository.name == "daed-1"
@@ -95,7 +95,7 @@ export default (app: Probot) => {
       // https://github.com/daeuniverse/daed/actions/runs/
       // 1.3 create a pull_request with head (sync-upstream) and base (main) for daed
       // https://octokit.github.io/rest.js/v18#pulls-create
-      const msg = `⏳ daed (origin/${metadata.default_branch}) is currently out-of-sync to dae-wing (origin/${metadata.default_branch}). Changes are proposed by @daebot in actions - ${latestWorkflowRun.html_url}`;
+      const msg = `⏳ daed (origin/${metadata.default_branch}) is currently out-of-sync to dae-wing (origin/${metadata.default_branch}); changes are proposed by @daebot in actions - ${latestWorkflowRun.html_url}`;
 
       await context.octokit.pulls
         .create({
@@ -193,11 +193,14 @@ export default (app: Probot) => {
       // case_#1: automatically assign assignee if not present
       // 1.1 assign pull_request author to be the default assignee
       // https://octokit.github.io/rest.js/v18#issues-add-assignees
+      const author = metadata.pull_request.author.includes("bot")
+        ? "daebot"
+        : metadata.pull_request.author;
       await context.octokit.issues.addAssignees({
         owner: metadata.owner,
         repo: metadata.repo,
         issue_number: metadata.pull_request.number,
-        assignees: [metadata.pull_request.author],
+        assignees: [author],
       });
 
       // 1.2 audit event
