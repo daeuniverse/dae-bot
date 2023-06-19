@@ -127,7 +127,6 @@ export default (app: Probot) => {
         });
 
       // 1.6 audit event
-
       app.log.info(msg);
 
       const tg = new TelegramClient(context as unknown as Context);
@@ -224,7 +223,7 @@ export default (app: Probot) => {
         "ci",
         "optimize",
         "chore",
-        "refactor"
+        "refactor",
       ];
 
       // https://octokit.github.io/rest.js/v18#issues-list-labels-on-issue
