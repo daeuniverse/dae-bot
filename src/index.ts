@@ -15,14 +15,15 @@ export default (app: Probot) => {
     app.log.info(context.payload.ref);
     app.log.info(context.payload.repository.name);
 
-    // on daed.sync-upstream event
+    // case_#1 trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main
+    const daedSyncBranch = "sync-upstream";
     if (
       context.payload.ref == "refs/heads/main" &&
       context.payload.repository.name == "dae-wing"
     ) {
       // 1.1 construct metadata from payload
       const metadata = {
-        repo: context.payload.repository.name,
+        repo: "daed",
         owner: context.payload.organization?.login as string,
         author: context.payload.sender.login,
         default_branch: context.payload.repository.default_branch,
@@ -36,32 +37,98 @@ export default (app: Probot) => {
       const latestRunUrl = await context.octokit.actions
         .createWorkflowDispatch({
           owner: metadata.owner,
-          repo: "daed",
-          workflow_id: "sync-upstream-source.yml",
+          repo: metadata.repo,
+          workflow_id: "sync-upstream.yml",
           ref: metadata.default_branch,
           inputs: {
             "wing-head": metadata.default_branch,
-            "pr-base-branch": metadata.default_branch,
-            "wing-sync-message": "chore: upgrade dae-wing",
+            "wing-sync-message": "chore(sync): upgrade dae-wing",
+            "pr-branch": daedSyncBranch,
           },
         })
         .then(() =>
+          // 1.3 get latest workflow run metadata
+          // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
           context.octokit.actions
             .listWorkflowRuns({
               owner: metadata.owner,
-              repo: "daed",
-              workflow_id: "sync-upstream-source.yml",
+              repo: metadata.repo,
+              workflow_id: "sync-upstream.yml",
               per_page: 1,
             })
             .then((res) => res.data.workflow_runs[0].html_url)
         );
 
-      // 1.3 get latest workflow run metadata
-      // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
-      // https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#create-a-workflow-dispatch-event
-
       // 1.4 audit event
-      const msg = `🏗️ a new commit was pushed to ${metadata.repo} (${metadata.default_branch}); dispatched sync-upstream-source workflow for daed; url: ${latestRunUrl}`;
+      const msg = `🏗️ a new commit was pushed to ${metadata.repo} (${metadata.default_branch}); dispatched ${daedSyncBranch} workflow for daed; url: ${latestRunUrl}`;
+      app.log.info(msg);
+
+      const tg = new TelegramClient(context as unknown as Context);
+      await tg.sendMsg(msg, [
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+      ]);
+    }
+
+    // case_#3 create a pull_request when branch sync-upstream is created and pushed to daed (remote)
+    if (
+      context.payload.before == "0000000000000000000000000000000000000000" &&
+      context.payload.repository.name == "daed" &&
+      context.payload.ref.split("/")[2] == daedSyncBranch
+    ) {
+      // 1.1 construct metadata from payload
+      const metadata = {
+        repo: context.payload.repository.name,
+        owner: context.payload.organization?.login as string,
+        author: context.payload.sender.login,
+        default_branch: context.payload.repository.default_branch,
+        head_branch: context.payload.ref.split("/")[2],
+      };
+      // 1.2 fetch latest sync-upstream workflow run
+      // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
+      const latestWorkflowRun = await context.octokit.actions
+        .listWorkflowRuns({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          workflow_id: "sync-upstream.yml",
+          per_page: 1,
+        })
+        .then((res) => res.data.workflow_runs[0]);
+
+      // https://github.com/daeuniverse/daed/actions/runs/
+      // 1.3 create a pull_request with head (sync-upstream) and base (main) for daed
+      // https://octokit.github.io/rest.js/v18#pulls-create
+      const msg = `⏳ daed (origin/${metadata.default_branch}) is currently out-of-sync to dae-wing (origin/${metadata.default_branch}); changes are proposed by @daebot in actions - ${latestWorkflowRun.html_url}`;
+
+      await context.octokit.pulls
+        .create({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          head: metadata.head_branch,
+          base: metadata.default_branch,
+          title: "chore(sync): keep upstream source up-to-date",
+          body: msg,
+        })
+        .then((res) => {
+          // 1.4 add labels
+          // https://octokit.github.io/rest.js/v18#issues-add-labels
+          context.octokit.issues.addLabels({
+            owner: metadata.owner,
+            repo: metadata.repo,
+            issue_number: res.data.number,
+            labels: ["automated-pr"],
+          });
+
+          // 1.5 add assignee
+          // https://octokit.github.io/rest.js/v18#issues-add-assignees
+          context.octokit.issues.addAssignees({
+            owner: metadata.owner,
+            repo: metadata.repo,
+            issue_number: res.data.number,
+            assignees: ["daebot"],
+          });
+        });
+
+      // 1.6 audit event
       app.log.info(msg);
 
       const tg = new TelegramClient(context as unknown as Context);
@@ -126,18 +193,22 @@ export default (app: Probot) => {
 
       // case_#1: automatically assign assignee if not present
       // 1.1 assign pull_request author to be the default assignee
+      // https://octokit.github.io/rest.js/v18#issues-add-assignees
+      const author = metadata.pull_request.author.includes("bot")
+        ? "daebot"
+        : metadata.pull_request.author;
       await context.octokit.issues.addAssignees({
         owner: metadata.owner,
         repo: metadata.repo,
         issue_number: metadata.pull_request.number,
-        assignees: [metadata.pull_request.author],
+        assignees: [author],
       });
 
+      // 1.2 audit event
       const msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is raised in ${metadata.repo}; assign @${metadata.pull_request.author} as the default assignee`;
 
       app.log.info(msg);
 
-      // 1.2 audit event
       const tg = new TelegramClient(context as unknown as Context);
       await tg.sendMsg(msg, [
         process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
@@ -146,7 +217,6 @@ export default (app: Probot) => {
       // case_#2: automatically assign label if not present, default label should align with "kind" as part of the pr title
 
       // 1.1 automatically add label(s) to pull_request
-      // https://octokit.github.io/rest.js/v18#issues-add-labels
       const defaultLables = [
         "fix",
         "feat",
@@ -155,8 +225,11 @@ export default (app: Probot) => {
         "ci",
         "optimize",
         "chore",
+        "refactor",
+        "style",
       ];
 
+      // https://octokit.github.io/rest.js/v18#issues-list-labels-on-issue
       const prOpenedLabels = await context.octokit.issues
         .listLabelsOnIssue({
           owner: metadata.owner,
@@ -182,6 +255,7 @@ export default (app: Probot) => {
             labels
           )}`;
 
+          // https://octokit.github.io/rest.js/v18#issues-add-labels
           await context.octokit.issues.addLabels({
             owner: metadata.owner,
             repo: metadata.repo,
@@ -222,9 +296,6 @@ export default (app: Probot) => {
       app.log.info(
         `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
       );
-
-      // TODO:
-      // case_#1: check assignee is present, if not set as pr author
 
       // case_#3: check if pr_branch is up-to-date, if not, merge remote HEAD branch to the pr branch
       // https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/keeping-your-pull-request-in-sync-with-the-base-branch
