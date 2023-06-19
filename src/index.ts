@@ -71,8 +71,8 @@ export default (app: Probot) => {
     // case_#3 create a pull_request when branch sync-upstream is created and pushed to daed (remote)
     if (
       context.payload.before == "0000000000000000000000000000000000000000" &&
-      context.payload.repository.name == "daed-1" && 
-      context.payload.ref.split("/")[2] == "main"
+      context.payload.repository.name == "daed-1" &&
+      context.payload.ref.split("/")[2] == "sync-upstream"
     ) {
       // 1.1 construct metadata from payload
       const metadata = {
