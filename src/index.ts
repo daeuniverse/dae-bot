@@ -139,7 +139,9 @@ export default (app: Probot) => {
       ];
 
       const labels = defaultLables
-        .filter((label: string) => metadata.pull_request.title.includes(label))
+        .filter((label: string) =>
+          metadata.pull_request.title.startsWith(label)
+        )
         .map((item) => {
           if (item == "feat") item = "feature";
           return item;
