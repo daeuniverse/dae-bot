@@ -16,12 +16,12 @@ export default (app: Probot) => {
     app.log.info(context.payload.repository.name);
 
     // case_#1 trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main
-    const syncBranch = "sync-upstream";
     if (
       context.payload.ref == "refs/heads/main" &&
       context.payload.repository.name == "ci-bot-experiment"
     ) {
       // 1.1 construct metadata from payload
+      const syncBranch = "sync-upstream";
       const metadata = {
         repo: "daed-1",
         owner: context.payload.organization?.login as string,
