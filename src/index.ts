@@ -16,12 +16,12 @@ export default (app: Probot) => {
     app.log.info(context.payload.repository.name);
 
     // case_#1 trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main
+    const daedSyncBranch = "sync-upstream";
     if (
       context.payload.ref == "refs/heads/main" &&
       context.payload.repository.name == "ci-bot-experiment"
     ) {
       // 1.1 construct metadata from payload
-      const syncBranch = "sync-upstream";
       const metadata = {
         repo: "daed-1",
         owner: context.payload.organization?.login as string,
@@ -43,7 +43,7 @@ export default (app: Probot) => {
           inputs: {
             "wing-head": metadata.default_branch,
             "wing-sync-message": "chore(sync): upgrade dae-wing",
-            "pr-branch": syncBranch,
+            "pr-branch": daedSyncBranch,
           },
         })
         .then(() =>
@@ -60,7 +60,7 @@ export default (app: Probot) => {
         );
 
       // 1.4 audit event
-      const msg = `🏗️ a new commit was pushed to ${metadata.repo} (${metadata.default_branch}); dispatched ${syncBranch} workflow for daed; url: ${latestRunUrl}`;
+      const msg = `🏗️ a new commit was pushed to ${metadata.repo} (${metadata.default_branch}); dispatched ${daedSyncBranch} workflow for daed; url: ${latestRunUrl}`;
       app.log.info(msg);
 
       const tg = new TelegramClient(context as unknown as Context);
@@ -73,7 +73,7 @@ export default (app: Probot) => {
     if (
       context.payload.before == "0000000000000000000000000000000000000000" &&
       context.payload.repository.name == "daed-1" &&
-      context.payload.ref.split("/")[2] == syncBranch
+      context.payload.ref.split("/")[2] == daedSyncBranch
     ) {
       // 1.1 construct metadata from payload
       const metadata = {
