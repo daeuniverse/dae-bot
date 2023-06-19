@@ -224,6 +224,7 @@ export default (app: Probot) => {
         "optimize",
         "chore",
         "refactor",
+        "style"
       ];
 
       // https://octokit.github.io/rest.js/v18#issues-list-labels-on-issue
