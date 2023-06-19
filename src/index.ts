@@ -122,7 +122,7 @@ export default (app: Probot) => {
           // https://octokit.github.io/rest.js/v18#issues-add-assignees
           context.octokit.issues.addAssignees({
             owner: metadata.owner,
-            repo: "daed-1",
+            repo: metadata.repo,
             issue_number: res.data.number,
             assignees: ["daebot"],
           });
