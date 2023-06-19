@@ -124,7 +124,26 @@ export default (app: Probot) => {
         `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
       );
 
-      // case_#1: automatically assign label if not present, default label should align with "kind" as part of the pr title
+      // case_#1: automatically assign assignee if not present
+      // 1.1 assign pull_request author to be the default assignee
+      await context.octokit.issues.addAssignees({
+        owner: metadata.owner,
+        repo: metadata.repo,
+        issue_number: metadata.pull_request.number,
+        assignees: [metadata.pull_request.author],
+      });
+
+      const msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is raised in ${metadata.repo}; assign @${metadata.pull_request.author} as the default assignee`;
+
+      app.log.info(msg);
+
+      // 1.2 audit event
+      const tg = new TelegramClient(context as unknown as Context);
+      await tg.sendMsg(msg, [
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+      ]);
+
+      // case_#2: automatically assign label if not present, default label should align with "kind" as part of the pr title
 
       // 1.1 automatically add label(s) to pull_request
       // https://octokit.github.io/rest.js/v18#issues-add-labels
@@ -138,56 +157,47 @@ export default (app: Probot) => {
         "chore",
       ];
 
-      const labels = defaultLables
-        .filter((label: string) =>
-          metadata.pull_request.title.startsWith(label)
-        )
-        .map((item) => {
-          if (item == "feat") item = "feature";
-          return item;
-        });
-
-      if (labels.length > 0) {
-        const msg = `🏷 PR - [#${metadata.pull_request.number}](${
-          metadata.pull_request.html_url
-        }) in ${metadata.repo} is missing labels; added ${JSON.stringify(
-          labels
-        )}`;
-
-        await context.octokit.issues.addLabels({
+      const prOpenedLabels = await context.octokit.issues
+        .listLabelsOnIssue({
           owner: metadata.owner,
           repo: metadata.repo,
           issue_number: metadata.pull_request.number,
-          labels: labels,
-        });
+        })
+        .then((res) => res.data);
 
-        // 1.2 audit event
-        app.log.info(msg);
+      if (prOpenedLabels.length == 0) {
+        const labels = defaultLables
+          .filter((label: string) =>
+            metadata.pull_request.title.startsWith(label)
+          )
+          .map((item) => {
+            if (item == "feat") item = "feature";
+            return item;
+          });
 
-        const tg = new TelegramClient(context as unknown as Context);
-        await tg.sendMsg(msg, [
-          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
-        ]);
+        if (labels.length > 0) {
+          const msg = `🏷 PR - [#${metadata.pull_request.number}](${
+            metadata.pull_request.html_url
+          }) in ${metadata.repo} is missing labels; added ${JSON.stringify(
+            labels
+          )}`;
+
+          await context.octokit.issues.addLabels({
+            owner: metadata.owner,
+            repo: metadata.repo,
+            issue_number: metadata.pull_request.number,
+            labels: labels,
+          });
+
+          // 1.2 audit event
+          app.log.info(msg);
+
+          const tg = new TelegramClient(context as unknown as Context);
+          await tg.sendMsg(msg, [
+            process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+          ]);
+        }
       }
-
-      // case_#2: automatically assign assignee if not present
-      // 1.1 assign pull_request author to be the default assignee
-      await context.octokit.issues.addAssignees({
-        owner: metadata.owner,
-        repo: metadata.repo,
-        issue_number: metadata.pull_request.number,
-        assignees: [metadata.pull_request.author],
-      });
-
-      const msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} is missing assignees; assign @${metadata.pull_request.author} as the default assignee`;
-
-      app.log.info(msg);
-
-      // 1.2 audit event
-      const tg = new TelegramClient(context as unknown as Context);
-      await tg.sendMsg(msg, [
-        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
-      ]);
     }
   );
 
