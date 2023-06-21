@@ -147,6 +147,115 @@ export default (app: Probot) => {
     await context.octokit.issues.createComment(comment);
   });
 
+  // on receive issue_comment.created event
+  app.on(
+    "issue_comment.created",
+    async (context: Context<"issue_comment.created">) => {
+      app.log.info(`received an issue event: ${context.payload.issue}`);
+      // TODO: add condition mappings
+      const metadata = {
+        repo: "ci-bot-experiment",
+        owner: context.payload.organization?.login as string,
+        author: context.payload.sender.login,
+        default_branch: context.payload.repository.default_branch,
+        issue: {
+          number: context.payload.issue.number,
+          title: context.payload.issue.title,
+          author: context.payload.issue.user.login,
+          html_url: context.payload.issue.html_url,
+          body: context.payload.issue.body,
+        },
+        comment: {
+          body: context.payload.comment.body,
+          user: context.payload.comment.user.login,
+          html_url: context.payload.comment.html_url,
+          created_at: context.payload.comment.created_at,
+        },
+      };
+
+      // case_#1: dump release changelogs to release branch (e.g. release-v0.1.0)
+      // 1.1 patch new changelogs into CHANGELOGS.md with regex
+      //
+      const tocPlaceHolder = "<!-- BEGIN NEW TOC ENTRY -->";
+      const contentPlaceHolder = "<!-- BEGIN NEW CHANGELOGS -->";
+      const releaseDate = metadata.comment.created_at
+        .split("T")[0]
+        .split("-")
+        .join("/");
+
+      // TODO: catch patter unmattch
+      const useRegex = (input: string): string => {
+        try {
+          let rcMatch = /v[0-9]+\.[0-9]+\.[0-9]+rc[0-9]+/;
+          let pMatch = /v[0-9]+\.[0-9]+\.[0-9]+p[0-9]+/;
+          let rmatch = /v[0-9]+\.[0-9]+\.[0-9]/;
+          if (rcMatch.test(input)) {
+            return input.match(rcMatch)![0];
+          } else if (pMatch.test(input)) {
+            return input.match(pMatch)![0];
+          } else {
+            return input.match(rmatch)![0];
+          }
+        } catch (err) {
+          console.log(err);
+          return "";
+        }
+      };
+
+      const releaseTag = useRegex(metadata.comment.body);
+      if (!releaseTag) return;
+      const releaseMetadata = {
+        tag: releaseTag,
+        prerelease: releaseTag.includes("rc"),
+        mdRefLink: releaseTag?.split(".").join(""),
+        branch: `release-${releaseTag}`,
+        date: releaseDate,
+      };
+      app.log.info(JSON.stringify(releaseMetadata));
+
+      // 1.1.1 get current CHANGELOGS.md content
+      // https://octokit.github.io/rest.js/v18#repos-get-content
+      const originalCopy = await context.octokit.repos
+        .getContent({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          path: "CHANGELOGS.md",
+          ref: metadata.default_branch,
+        })
+        .then((res: any) => {
+          let buff = new Buffer(res.data.content, "base64");
+          return buff.toString("utf-8");
+        });
+
+      // 1.1.2 replace placeHolder with new changelogs for the new release
+      var changelogs = originalCopy.replace(
+        tocPlaceHolder,
+        `- [${releaseMetadata.tag} ${
+          releaseMetadata.prerelease ? "(Pre-release)" : "(Latest)"
+        }](#${releaseMetadata.mdRefLink}${
+          releaseMetadata.prerelease ? "-pre-release" : "-latest"
+        })`
+      );
+      changelogs = changelogs.replace(
+        contentPlaceHolder,
+        `### ${releaseMetadata.tag} ${
+          releaseMetadata.prerelease ? "(Latest)" : "(Pre-release)"
+        }
+
+> Release date: ${releaseDate}
+
+${metadata.issue.body}`
+      );
+
+      // console.log(changelogs);
+
+      // 1.2 commit release changelogs to the release branch
+
+      // 1.3 create a pull_request head_branch (release-v0.1.0) -> base_branch (origin/main)
+      //
+    }
+  );
+
   // on receive star event
   app.on("star.created", async (context: Context<"star.created">) => {
     const payload = context.payload.repository;
@@ -188,7 +297,7 @@ export default (app: Probot) => {
       };
 
       app.log.info(
-        `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
+        `received a pull_request.opened event: ${JSON.stringify(metadata)}`
       );
 
       // case_#1: automatically assign assignee if not present
@@ -404,7 +513,7 @@ export default (app: Probot) => {
       };
 
       app.log.info(
-        `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
+        `received a pull_request.closed event: ${JSON.stringify(metadata)}`
       );
 
       // case_#1:store pr metrics to kv
