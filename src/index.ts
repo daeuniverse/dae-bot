@@ -262,8 +262,6 @@ export default (app: Probot) => {
 ${context.payload.issue.body}`
         );
 
-        console.log(changelogs);
-
         // 1.2 update CHANGELOGS.md in the release_branch
         // https://octokit.github.io/rest.js/v18#repos-create-or-update-file-contents
         // https://stackoverflow.com/a/71130304
