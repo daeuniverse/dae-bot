@@ -60,7 +60,7 @@ export default (app: Probot) => {
         );
 
       // 1.4 audit event
-      const msg = `🏗️ a new commit was pushed to ${metadata.repo} (${metadata.default_branch}); dispatched ${daedSyncBranch} workflow for daed; url: ${latestRunUrl}`;
+      const msg = `🏗️ a new commit was pushed to dae-wing (${metadata.default_branch}); dispatched ${daedSyncBranch} workflow for daed; url: ${latestRunUrl}`;
       app.log.info(msg);
 
       const tg = new TelegramClient(context as unknown as Context);
