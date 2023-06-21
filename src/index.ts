@@ -5,9 +5,9 @@ import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
 import { Buffer } from "buffer";
 
-// const Encode = (data: string): string =>
-//   // ensure utf-8 format
-//   decodeURIComponent(Buffer.from(data, "binary").toString("base64"));
+const Encode = (data: string): string =>
+  // ensure utf-8 format
+  decodeURIComponent(Buffer.from(data, "binary").toString("base64"));
 
 export default (app: Probot) => {
   app.log("The app is loaded successfully!");
@@ -182,6 +182,7 @@ export default (app: Probot) => {
       // case_#1: dump release changelogs to release branch (e.g. release-v0.1.0)
       // 1.1 patch new changelogs into CHANGELOGS.md with regex
       if (
+        ["dae", "daed", "ci-bot-experiment"].includes(metadata.repo) &&
         metadata.comment.body.startsWith("@daebot") &&
         metadata.comment.body.includes("release-") &&
         ["yqlbu", "kunish", "mzz2017"].includes(metadata.comment.user)
@@ -244,15 +245,16 @@ export default (app: Probot) => {
             releaseMetadata.prerelease ? "(Pre-release)" : "(Latest)"
           }](#${releaseMetadata.mdRefLink}${
             releaseMetadata.prerelease ? "-pre-release" : "-latest"
-          })
-          ${tocPlaceHolder}`
+          })\n${tocPlaceHolder}
+          `
         );
+
         changelogs = changelogs.replace(
           contentPlaceHolder,
           `${contentPlaceHolder}
 
 ### ${releaseMetadata.tag} ${
-            releaseMetadata.prerelease ? "(Latest)" : "(Pre-release)"
+            releaseMetadata.prerelease ? "(Pre-release)" : "(Latest)"
           }
 
 > Release date: ${releaseDate}
@@ -260,26 +262,28 @@ export default (app: Probot) => {
 ${context.payload.issue.body}`
         );
 
+        console.log(changelogs);
+
         // 1.2 update CHANGELOGS.md in the release_branch
         // https://octokit.github.io/rest.js/v18#repos-create-or-update-file-contents
         // https://stackoverflow.com/a/71130304
-        // await context.octokit.repos.createOrUpdateFileContents({
-        //   owner: metadata.owner,
-        //   repo: metadata.repo,
-        //   path: "CHANGELOGS.md",
-        //   branch: releaseMetadata.branch,
-        //   sha: originalCopy.sha,
-        //   message: `ci: generate changelogs for ${releaseMetadata.branch}`,
-        //   content: Encode(changelogs),
-        //   committer: {
-        //     name: "daebot",
-        //     email: "dae@v2raya.org",
-        //   },
-        //   author: {
-        //     name: "daebot",
-        //     email: "dae@v2raya.org",
-        //   },
-        // });
+        await context.octokit.repos.createOrUpdateFileContents({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          path: "CHANGELOGS.md",
+          branch: releaseMetadata.branch,
+          sha: originalCopy.sha,
+          message: `ci: generate changelogs for ${releaseMetadata.branch}`,
+          content: Encode(changelogs),
+          committer: {
+            name: "daebot",
+            email: "dae@v2raya.org",
+          },
+          author: {
+            name: "daebot",
+            email: "dae@v2raya.org",
+          },
+        });
 
         // 1.3 create a pull_request head_branch (release-v0.1.0) -> base_branch (origin/main)
         // https://octokit.github.io/rest.js/v18#pulls-create
