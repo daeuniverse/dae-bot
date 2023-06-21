@@ -409,20 +409,22 @@ export default (app: Probot) => {
 
       // case_#1:store pr metrics to kv
       // 1.1 store pr metrics data to kv
-      const key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
-        metadata.pull_request.number
-      }`;
-      await kv.set(key, JSON.stringify(metadata));
+      if (metadata.pull_request.merged) {
+        const key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
+          metadata.pull_request.number
+        }`;
+        await kv.set(key, JSON.stringify(metadata));
 
-      // 1.2 audit event
-      const msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
+        // 1.2 audit event
+        const msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
 
-      app.log.info(msg);
+        app.log.info(msg);
 
-      const tg = new TelegramClient(context as unknown as Context);
-      await tg.sendMsg(msg, [
-        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
-      ]);
+        const tg = new TelegramClient(context as unknown as Context);
+        await tg.sendMsg(msg, [
+          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+        ]);
+      }
     }
   );
 };
