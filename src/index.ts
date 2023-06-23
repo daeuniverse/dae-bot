@@ -236,6 +236,7 @@ export default (app: Probot) => {
 
         // 1.1.2 create a release_branch based on the default_branch (main)
         // https://octokit.github.io/rest.js/v18#git-create-ref
+        // https://docs.github.com/en/rest/git/refs?apiVersion=2022-11-28#create-a-reference
         await context.octokit.git.createRef({
           owner: metadata.owner,
           repo: metadata.repo,
