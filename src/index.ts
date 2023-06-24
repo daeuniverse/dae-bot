@@ -1,5 +1,5 @@
 import kv from "@vercel/kv";
-import * as Duration from "iso8601-duration";src/index.ts
+import * as Duration from "iso8601-duration";
 import { Context, Probot } from "probot";
 import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
