@@ -269,9 +269,7 @@ export default (app: Probot) => {
             };
           });
 
-        if (!originalCopy) {
-          return;
-        }
+        if (!originalCopy) return;
 
         // 1.1.3 replace placeHolder with new changelogs for the new release
         var changelogs = originalCopy.content.replace(
