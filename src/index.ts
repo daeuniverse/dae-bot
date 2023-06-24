@@ -182,7 +182,7 @@ export default (app: Probot) => {
       // case_#1: dump release changelogs to release branch (e.g. release-v0.1.0)
       // 1.1 patch new changelogs into CHANGELOGS.md with regex
       if (
-        ["dae", "daed", "daed-1"].includes(metadata.repo) &&
+        ["dae", "daed"].includes(metadata.repo) &&
         metadata.comment.body.startsWith("@daebot") &&
         metadata.comment.body.includes("release-") &&
         ["yqlbu", "kunish", "mzz2017"].includes(metadata.comment.user)
