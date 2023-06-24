@@ -152,6 +152,26 @@ export default (app: Probot) => {
     await context.octokit.issues.createComment(comment);
   });
 
+  // on receive issue_closed event
+  app.on("issues.closed", async (context: Context<"issues.closed">) => {
+    const metadata = {
+      repo: context.payload.repository.name,
+      owner: context.payload.organization?.login as string,
+      author: context.payload.sender.login,
+      default_branch: context.payload.repository.default_branch,
+      issue: {
+        number: context.payload.issue.number,
+        title: context.payload.issue.title,
+        author: context.payload.issue.user.login,
+        html_url: context.payload.issue.html_url,
+      },
+    };
+
+    app.log.info(
+      `received an issues.closed event: ${JSON.stringify(metadata)}`
+    );
+  });
+
   // on receive issue_comment.created event
   app.on(
     "issue_comment.created",
@@ -166,6 +186,7 @@ export default (app: Probot) => {
           title: context.payload.issue.title,
           author: context.payload.issue.user.login,
           html_url: context.payload.issue.html_url,
+          state: context.payload.issue.state,
         },
         comment: {
           body: context.payload.comment.body,
@@ -185,6 +206,7 @@ export default (app: Probot) => {
         ["dae", "daed"].includes(metadata.repo) &&
         metadata.comment.body.startsWith("@daebot") &&
         metadata.comment.body.includes("release-") &&
+        metadata.issue.state == "closed" &&
         ["yqlbu", "kunish", "mzz2017"].includes(metadata.comment.user)
       ) {
         const tocPlaceHolder = "<!-- BEGIN NEW TOC ENTRY -->";
