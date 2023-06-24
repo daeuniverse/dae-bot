@@ -1,9 +1,9 @@
 import kv from "@vercel/kv";
+import { Buffer } from "buffer";
 import * as Duration from "iso8601-duration";
 import { Context, Probot } from "probot";
 import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
-import { Buffer } from "buffer";
 
 const Encode = (data: string): string =>
   // ensure utf-8 format
@@ -252,10 +252,26 @@ export default (app: Probot) => {
             path: "CHANGELOGS.md",
             ref: releaseMetadata.branch,
           })
-          .then((res: any) => ({
-            content: Buffer.from(res.data.content, "base64").toString("utf-8"),
-            sha: res.data.sha,
-          }));
+          .then((res) => {
+            if (
+              !Array.isArray(res.data) ||
+              !res.data[0].content ||
+              !res.data[0].sha
+            ) {
+              return;
+            }
+
+            return {
+              content: Buffer.from(res.data[0].content, "base64").toString(
+                "utf-8"
+              ),
+              sha: res.data[0].sha,
+            };
+          });
+
+        if (!originalCopy) {
+          return;
+        }
 
         // 1.1.3 replace placeHolder with new changelogs for the new release
         var changelogs = originalCopy.content.replace(
