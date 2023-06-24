@@ -457,7 +457,8 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
         "chore",
         "refactor",
         "style",
-        "documentation",
+        "doc",
+        "docs",
       ];
 
       // https://octokit.github.io/rest.js/v18#issues-list-labels-on-issue
