@@ -421,6 +421,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
         "chore",
         "refactor",
         "style",
+        "documentation",
       ];
 
       // https://octokit.github.io/rest.js/v18#issues-list-labels-on-issue
@@ -439,6 +440,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
           )
           .map((item) => {
             if (item == "feat") item = "feature";
+            if (item == "docs") item = "documentation";
             return item;
           });
 
