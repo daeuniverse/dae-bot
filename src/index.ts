@@ -194,7 +194,6 @@ export default (app: Probot) => {
           .split("-")
           .join("/");
 
-        // TODO: catch patter unmattch
         const useRegex = (input: string): string => {
           try {
             let rcMatch = /v[0-9]+\.[0-9]+\.[0-9]+rc[0-9]+/;
@@ -261,17 +260,20 @@ export default (app: Probot) => {
         // 1.1.3 replace placeHolder with new changelogs for the new release
         var changelogs = originalCopy.content.replace(
           tocPlaceHolder,
-          `${tocPlaceHolder}
+          `
+${tocPlaceHolder}
 - [${releaseMetadata.tag} ${
             releaseMetadata.prerelease ? "(Pre-release)" : "(Latest)"
           }](#${releaseMetadata.mdRefLink}${
             releaseMetadata.prerelease ? "-pre-release" : "-latest"
-          })`
+          })
+`.trim()
         );
 
         changelogs = changelogs.replace(
           contentPlaceHolder,
-          `${contentPlaceHolder}
+          `
+${contentPlaceHolder}
 
 ### ${releaseMetadata.tag} ${
             releaseMetadata.prerelease ? "(Pre-release)" : "(Latest)"
@@ -279,7 +281,8 @@ export default (app: Probot) => {
 
 > Release date: ${releaseDate}
 
-${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}`
+${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
+`.trim()
         );
 
         // 1.2 update CHANGELOGS.md in the release_branch
