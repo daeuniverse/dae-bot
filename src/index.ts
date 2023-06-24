@@ -1,5 +1,5 @@
 import kv from "@vercel/kv";
-import * as Duration from "iso8601-duration";
+import * as Duration from "iso8601-duration";src/index.ts
 import { Context, Probot } from "probot";
 import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
@@ -601,8 +601,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
         `received a pull_request.closed event: ${JSON.stringify(metadata)}`
       );
 
-      // case_#1: store pr metrics to kv
-      if (metadata.pull_request.merged == true) {
+      if (metadata.pull_request.merged) {
         // 1.1 store pr metrics data to kv
         const key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
           metadata.pull_request.number
@@ -622,7 +621,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
       // case_#2: create a release tag when release_branch is merged
       if (
-        metadata.pull_request.merged == true &&
+        metadata.pull_request.merged &&
         metadata.pull_request.ref.startsWith("release-")
       ) {
         // 1.1 get the latest commit from default_branch (main)
