@@ -1,8 +1,13 @@
 import kv from "@vercel/kv";
+import { Buffer } from "buffer";
 import * as Duration from "iso8601-duration";
 import { Context, Probot } from "probot";
 import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
+
+const Encode = (data: string): string =>
+  // ensure utf-8 format
+  decodeURIComponent(Buffer.from(data, "binary").toString("base64"));
 
 export default (app: Probot) => {
   app.log("The app is loaded successfully!");
@@ -147,6 +152,209 @@ export default (app: Probot) => {
     await context.octokit.issues.createComment(comment);
   });
 
+  // on receive issue_comment.created event
+  app.on(
+    "issue_comment.created",
+    async (context: Context<"issue_comment.created">) => {
+      const metadata = {
+        repo: context.payload.repository.name,
+        owner: context.payload.organization?.login as string,
+        author: context.payload.sender.login,
+        default_branch: context.payload.repository.default_branch,
+        issue: {
+          number: context.payload.issue.number,
+          title: context.payload.issue.title,
+          author: context.payload.issue.user.login,
+          html_url: context.payload.issue.html_url,
+        },
+        comment: {
+          body: context.payload.comment.body,
+          user: context.payload.comment.user.login,
+          html_url: context.payload.comment.html_url,
+          created_at: context.payload.comment.created_at,
+        },
+      };
+
+      app.log.info(
+        `received an issue_comment.created event: ${JSON.stringify(metadata)}`
+      );
+
+      // case_#1: dump release changelogs to release branch (e.g. release-v0.1.0)
+      // 1.1 patch new changelogs into CHANGELOGS.md with regex
+      if (
+        ["dae", "daed"].includes(metadata.repo) &&
+        metadata.comment.body.startsWith("@daebot") &&
+        metadata.comment.body.includes("release-") &&
+        ["yqlbu", "kunish", "mzz2017"].includes(metadata.comment.user)
+      ) {
+        const tocPlaceHolder = "<!-- BEGIN NEW TOC ENTRY -->";
+        const contentPlaceHolder = "<!-- BEGIN NEW CHANGELOGS -->";
+        const releaseDate = metadata.comment.created_at
+          .split("T")[0]
+          .split("-")
+          .join("/");
+
+        const useRegex = (input: string): string => {
+          try {
+            let rcMatch = /v[0-9]+\.[0-9]+\.[0-9]+rc[0-9]+/;
+            let pMatch = /v[0-9]+\.[0-9]+\.[0-9]+p[0-9]+/;
+            let rmatch = /v[0-9]+\.[0-9]+\.[0-9]/;
+            if (rcMatch.test(input)) {
+              return input.match(rcMatch)![0];
+            } else if (pMatch.test(input)) {
+              return input.match(pMatch)![0];
+            } else {
+              return input.match(rmatch)![0];
+            }
+          } catch (err) {
+            console.log(err);
+            return "";
+          }
+        };
+
+        const releaseTag = useRegex(metadata.comment.body);
+        if (!releaseTag) return;
+        const releaseMetadata = {
+          tag: releaseTag,
+          prerelease: releaseTag.includes("rc"),
+          mdRefLink: releaseTag?.split(".").join(""),
+          branch: `release-${releaseTag}`,
+          date: releaseDate,
+        };
+        app.log.info(JSON.stringify(releaseMetadata));
+
+        // 1.1 get the latest commit from default_branch (main)
+        // https://octokit.github.io/rest.js/v18#git-get-commit
+        const headCommit = await context.octokit.repos
+          .getCommit({
+            repo: metadata.repo,
+            owner: metadata.owner,
+            ref: metadata.default_branch,
+          })
+          .then((res) => res.data);
+
+        // 1.1.2 create a release_branch based on the default_branch (main)
+        // https://octokit.github.io/rest.js/v18#git-create-ref
+        // https://docs.github.com/en/rest/git/refs?apiVersion=2022-11-28#create-a-reference
+        await context.octokit.git.createRef({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          ref: `refs/heads/${releaseMetadata.branch}`,
+          sha: headCommit.sha,
+        });
+
+        // 1.1.2 get current CHANGELOGS.md content
+        // https://octokit.github.io/rest.js/v18#repos-get-content
+        const originalCopy = await context.octokit.repos
+          .getContent({
+            owner: metadata.owner,
+            repo: metadata.repo,
+            path: "CHANGELOGS.md",
+            ref: releaseMetadata.branch,
+          })
+          .then((res) => {
+            if (
+              !Array.isArray(res.data) ||
+              !res.data[0].content ||
+              !res.data[0].sha
+            ) {
+              return;
+            }
+
+            return {
+              content: Buffer.from(res.data[0].content, "base64").toString(
+                "utf-8"
+              ),
+              sha: res.data[0].sha,
+            };
+          });
+
+        if (!originalCopy) return;
+
+        // 1.1.3 replace placeHolder with new changelogs for the new release
+        var changelogs = originalCopy.content.replace(
+          tocPlaceHolder,
+          `
+${tocPlaceHolder}
+- [${releaseMetadata.tag} ${
+            releaseMetadata.prerelease ? "(Pre-release)" : "(Latest)"
+          }](#${releaseMetadata.mdRefLink}${
+            releaseMetadata.prerelease ? "-pre-release" : "-latest"
+          })
+`.trim()
+        );
+
+        changelogs = changelogs.replace(
+          contentPlaceHolder,
+          `
+${contentPlaceHolder}
+
+### ${releaseMetadata.tag} ${
+            releaseMetadata.prerelease ? "(Pre-release)" : "(Latest)"
+          }
+
+> Release date: ${releaseDate}
+
+${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
+`.trim()
+        );
+
+        // 1.2 update CHANGELOGS.md in the release_branch
+        // https://octokit.github.io/rest.js/v18#repos-create-or-update-file-contents
+        // https://stackoverflow.com/a/71130304
+        await context.octokit.repos.createOrUpdateFileContents({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          path: "CHANGELOGS.md",
+          branch: releaseMetadata.branch,
+          sha: originalCopy.sha,
+          message: `ci: generate changelogs for ${releaseMetadata.branch}`,
+          content: Encode(changelogs),
+          committer: {
+            name: "daebot",
+            email: "dae@v2raya.org",
+          },
+          author: {
+            name: "daebot",
+            email: "dae@v2raya.org",
+          },
+        });
+
+        // 1.3 create a pull_request head_branch (release-v0.1.0) -> base_branch (origin/main)
+        // https://octokit.github.io/rest.js/v18#pulls-create
+        var msg = `🛸 Auto release process begins! Changelogs and release notes are generated by @daebot automatically. Ref: issue [#${metadata.issue.number}](${metadata.issue.html_url})`;
+        const pr = await context.octokit.pulls
+          .create({
+            owner: metadata.owner,
+            repo: metadata.repo,
+            head: releaseMetadata.branch,
+            base: metadata.default_branch,
+            title: `ci(release): draft release ${releaseMetadata.tag}`,
+            body: msg,
+          })
+          .then((res) => res.data);
+
+        // 1.4 add labels
+        // https://octokit.github.io/rest.js/v18#issues-add-labels
+        await context.octokit.issues.addLabels({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          issue_number: pr.number,
+          labels: ["automated-pr", "release"],
+        });
+
+        // 1.5 audit event
+        msg = msg += `; PR [#${pr.number}](${pr.html_url})`;
+        app.log.info(msg);
+
+        const tg = new TelegramClient(context as unknown as Context);
+        await tg.sendMsg(msg, [
+          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+        ]);
+      }
+    }
+  );
+
   // on receive star event
   app.on("star.created", async (context: Context<"star.created">) => {
     const payload = context.payload.repository;
@@ -188,7 +396,7 @@ export default (app: Probot) => {
       };
 
       app.log.info(
-        `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
+        `received a pull_request.opened event: ${JSON.stringify(metadata)}`
       );
 
       // case_#1: automatically assign assignee if not present
@@ -205,7 +413,7 @@ export default (app: Probot) => {
       });
 
       // 1.2 audit event
-      const msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is raised in ${metadata.repo}; assign @${metadata.pull_request.author} as the default assignee`;
+      const msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is raised in ${metadata.repo}; assign @${author} as the default assignee`;
 
       app.log.info(msg);
 
@@ -227,6 +435,7 @@ export default (app: Probot) => {
         "chore",
         "refactor",
         "style",
+        "documentation",
       ];
 
       // https://octokit.github.io/rest.js/v18#issues-list-labels-on-issue
@@ -245,6 +454,7 @@ export default (app: Probot) => {
           )
           .map((item) => {
             if (item == "feat") item = "feature";
+            if (item == "docs" || item == "doc") item = "documentation";
             return item;
           });
 
@@ -404,12 +614,11 @@ export default (app: Probot) => {
       };
 
       app.log.info(
-        `received a pull_request.synchronize event: ${JSON.stringify(metadata)}`
+        `received a pull_request.closed event: ${JSON.stringify(metadata)}`
       );
 
-      // case_#1:store pr metrics to kv
-      // 1.1 store pr metrics data to kv
       if (metadata.pull_request.merged) {
+        // 1.1 store pr metrics data to kv
         const key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
           metadata.pull_request.number
         }`;
@@ -417,6 +626,69 @@ export default (app: Probot) => {
 
         // 1.2 audit event
         const msg = `🚀 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
+
+        app.log.info(msg);
+
+        const tg = new TelegramClient(context as unknown as Context);
+        await tg.sendMsg(msg, [
+          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+        ]);
+      }
+
+      // case_#2: create a release tag when release_branch is merged
+      if (
+        metadata.pull_request.merged &&
+        metadata.pull_request.ref.startsWith("release-")
+      ) {
+        // 1.1 get the latest commit from default_branch (main)
+        // https://octokit.github.io/rest.js/v18#git-get-commit
+        const headCommit = await context.octokit.repos
+          .getCommit({
+            repo: metadata.repo,
+            owner: metadata.owner,
+            ref: metadata.default_branch,
+          })
+          .then((res) => res.data);
+
+        // 1.2 create a release tag when release_branch is merged
+        // https://octokit.github.io/rest.js/v18#git-create-ref
+        // https://docs.github.com/en/rest/git/tags?apiVersion=2022-11-28
+        const tag = metadata.pull_request.ref.split("-")[1];
+        const prerelease = tag.includes("rc") || tag.includes("p*");
+        await context.octokit.git.createRef({
+          owner: metadata.owner,
+          repo: metadata.repo,
+          ref: `refs/tags/${tag}`,
+          sha: headCommit.sha,
+        });
+
+        // 1.3 kick off the release build workflow
+        // https://octokit.github.io/rest.js/v18#actions-create-workflow-dispatch
+        const workflowRunUrl = await context.octokit.actions
+          .createWorkflowDispatch({
+            owner: metadata.owner,
+            repo: metadata.repo,
+            workflow_id: prerelease ? "prerelease.yml" : "release.yml",
+            ref: metadata.default_branch,
+            inputs: {
+              tag: tag,
+            },
+          })
+          .then(() =>
+            // get latest workflow run metadata
+            // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
+            context.octokit.actions
+              .listWorkflowRuns({
+                owner: metadata.owner,
+                repo: metadata.repo,
+                workflow_id: prerelease ? "prerelease.yml" : "release.yml",
+                per_page: 1,
+              })
+              .then((res) => res.data.workflow_runs[0].html_url)
+          );
+
+        // 1.4 audit event
+        const msg = `🌌 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) associated with ${metadata.pull_request.ref} has been merged; created and pushed a new release tag ${tag}; release build is now kicked off! just chill, we are getting there 💪; workflow run: ${workflowRunUrl}`;
 
         app.log.info(msg);
 
