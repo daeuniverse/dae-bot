@@ -454,7 +454,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
           )
           .map((item) => {
             if (item == "feat") item = "feature";
-            if (item == "docs") item = "documentation";
+            if (item == "docs" || item == "doc") item = "documentation";
             return item;
           });
 
