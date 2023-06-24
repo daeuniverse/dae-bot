@@ -274,24 +274,10 @@ export default (app: Probot) => {
             path: "CHANGELOGS.md",
             ref: releaseMetadata.branch,
           })
-          .then((res) => {
-            if (
-              !Array.isArray(res.data) ||
-              !res.data[0].content ||
-              !res.data[0].sha
-            ) {
-              return;
-            }
-
-            return {
-              content: Buffer.from(res.data[0].content, "base64").toString(
-                "utf-8"
-              ),
-              sha: res.data[0].sha,
-            };
-          });
-
-        if (!originalCopy) return;
+          .then((res: any) => ({
+            content: Buffer.from(res.data.content, "base64").toString("utf-8"),
+            sha: res.data.sha,
+          }));
 
         // 1.1.3 replace placeHolder with new changelogs for the new release
         var changelogs = originalCopy.content.replace(
