@@ -741,7 +741,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
       `received a release.released event: ${JSON.stringify(metadata)}`
     );
 
-    // 1.1 store pr metrics data to kv
+    // 1.1 store release metrics data to kv
     const key = `released.${metadata.repo}.${uuidv4().slice(0, 7)}.${
       metadata.release.tag
     }`;
