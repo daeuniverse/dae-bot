@@ -26,6 +26,7 @@ async function handler(
     html_url: context.payload.repository.html_url,
     pull_request: {
       ref: context.payload.pull_request.head.ref,
+      sha: context.payload.pull_request.head.sha,
       title: context.payload.pull_request.title,
       author: context.payload.pull_request.user.login,
       number: context.payload.pull_request.number,
@@ -123,6 +124,36 @@ async function handler(
           process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
         ]);
       }
+    }
+  } catch (err) {
+    return { result: "Ops something goes wrong.", error: JSON.stringify(err) };
+  }
+
+  // case_#3: assign daebot as one of the reviewers
+  try {
+    const defaultLables = [
+      "fix",
+      "hotfix",
+      "feat",
+      "feature",
+      "patch",
+      "ci",
+      "optimize",
+      "refactor",
+    ];
+    if (
+      defaultLables.filter((label: string) =>
+        metadata.pull_request.title.startsWith(label)
+      ).length > 0
+    ) {
+      // 1.1 assign daebot as one of the reviewers
+      // https://octokit.github.io/rest.js/v18#pulls-request-reviewers
+      await extension.octokit.pulls.requestReviewers({
+        repo: metadata.repo,
+        owner: metadata.owner,
+        pull_number: metadata.pull_request.number,
+        reviewers: ["dae-bot[bot]"],
+      });
     }
   } catch (err) {
     return { result: "Ops something goes wrong.", error: JSON.stringify(err) };

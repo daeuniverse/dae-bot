@@ -15,6 +15,7 @@ export default (app: Probot) => {
       "pull_request.opened",
       "pull_request.synchronize",
       "pull_request.closed",
+      "pull_request.labeled",
       "release.released",
     ],
     async (context: Context<any>) => {
@@ -25,7 +26,7 @@ export default (app: Probot) => {
         ? `${context.name}.${context.payload.action}`
         : context.name;
       const result = await Run(context, app, full_event);
-      app.log.info(JSON.stringify(result));
+      result.error ? app.log.error(result) : app.log.info(result);
     }
   );
 };
