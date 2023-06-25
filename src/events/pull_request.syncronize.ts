@@ -27,6 +27,7 @@ async function handler(
     html_url: context.payload.repository.html_url,
     pull_request: {
       ref: context.payload.pull_request.head.ref,
+      sha: context.payload.pull_request.head.sha,
       author: context.payload.pull_request.user.login,
       number: context.payload.pull_request.number,
       updated_at: context.payload.pull_request.updated_at,

@@ -4,6 +4,7 @@ import ReleaseHandler from "./events/release.released";
 import PullRequestOpenHandler from "./events/pull_request.opened";
 import PullRequestCloseHandler from "./events/pull_request.closed";
 import PullRequestSynchronizeHandler from "./events/pull_request.syncronize";
+import PullRequestLabelHandler from "./events/pull_request.labeled";
 import IssueCloseHandler from "./events/issues.closed";
 import IssueOpenHandler from "./events/issues.opened";
 import IssueCommentCreateHandler from "./events/issue_comment.created";
@@ -19,6 +20,7 @@ export const Handlers: HandlerModule[] = [
   PullRequestOpenHandler,
   PullRequestCloseHandler,
   PullRequestSynchronizeHandler,
+  PullRequestLabelHandler,
   IssueCloseHandler,
   IssueOpenHandler,
   IssueCommentCreateHandler,
