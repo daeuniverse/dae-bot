@@ -8,8 +8,8 @@ import {
 } from "../common";
 
 export = {
-  name: "star.created",
-  config_key: "star.created",
+  name: "push",
+  config_key: "push",
   handler: handler as Handler,
 } as HandlerModule;
 
