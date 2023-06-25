@@ -43,9 +43,9 @@ async function handler(
         process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
       ]);
     }
-
-    return { result: "ok!" };
   } catch (err) {
     return { result: "Ops something goes wrong.", error: JSON.stringify(err) };
   }
+
+  return { result: "ok!" };
 }
