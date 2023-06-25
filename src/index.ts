@@ -1,8 +1,6 @@
-import { kv } from "@vercel/kv";
 import { Buffer } from "buffer";
 import * as Duration from "iso8601-duration";
 import { Context, Probot } from "probot";
-import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
 import { Run } from "./runner";
 
@@ -492,44 +490,8 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
   });
 
   // on released
-  app.on("release.released", async (context: Context<"release.released">) => {
-    const metadata = {
-      repo: context.payload.repository.name,
-      owner: context.payload.organization?.login,
-      default_branch: context.payload.repository.default_branch,
-      release: {
-        html_url: context.payload.release.html_url,
-        author: context.payload.release.author.login,
-        tag: context.payload.release.tag_name,
-        prerelease: context.payload.release.prerelease,
-        published_at: context.payload.release.published_at,
-      },
-    };
-
-    app.log.info(
-      `received a release.released event: ${JSON.stringify(metadata)}`
-    );
-
-    // 1.1 store release metrics data to kv
-    const key = `released.${metadata.repo}.${uuidv4().slice(0, 7)}.${
-      metadata.release.tag
-    }`;
-    await kv.set(key, JSON.stringify(metadata));
-
-    // 1.2 audit event
-    const msg = `🌠 ${metadata.repo} published a new release [${metadata.release.tag}](${metadata.release.html_url}); it's been a long journey, thank you all for contributing to and supporting the [@daeuniverse](https://github.com/daeuniverse) community!`;
-
-    app.log.info(msg);
-
-    const tg = new TelegramClient();
-    const {
-      TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID,
-      TELEGRAM_DAEUNIVERSE_CHANNEL_ID,
-    } = process.env;
-
-    await tg.sendMsg(msg, [
-      TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
-      TELEGRAM_DAEUNIVERSE_CHANNEL_ID!,
-    ]);
+  app.on("release.released", async (context: Context<any>) => {
+    const result = await Run(context, app, "release.released");
+    app.log.info(JSON.stringify(result));
   });
 };
