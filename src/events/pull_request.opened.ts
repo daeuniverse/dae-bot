@@ -54,7 +54,7 @@ async function handler(
     });
 
     // 1.2 audit event
-    const msg = `👷 PR - [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is raised in ${metadata.repo}; assign @${author} as the default assignee`;
+    const msg = `👷 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) is raised in ${metadata.repo}; assign @${author} as the default assignee`;
 
     app.log.info(msg);
 
