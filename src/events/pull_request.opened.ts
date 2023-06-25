@@ -39,6 +39,22 @@ async function handler(
     `received a pull_request.opened event: ${JSON.stringify(metadata)}`
   );
 
+  const defaultLables = [
+    "fix",
+    "feat",
+    "feature",
+    "patch",
+    "ci",
+    "optimize",
+    "chore",
+    "refactor",
+    "style",
+    "doc",
+    "docs",
+  ];
+
+  const strictLabels = defaultLables.slice(0, -3);
+
   // case_#1: automatically assign assignee if not present
   try {
     // 1.1 assign pull_request author to be the default assignee
@@ -61,27 +77,13 @@ async function handler(
     await extension.tg.sendMsg(msg, [
       process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
     ]);
-  } catch (err) {
-    return { result: "Ops something goes wrong.", error: JSON.stringify(err) };
+  } catch (err: any) {
+    return { result: "Ops something goes wrong.", error: err };
   }
 
   // case_#2: automatically assign label if not present, default label should align with "kind" as part of the pr title
   try {
     // 1.1 automatically add label(s) to pull_request
-    const defaultLables = [
-      "fix",
-      "feat",
-      "feature",
-      "patch",
-      "ci",
-      "optimize",
-      "chore",
-      "refactor",
-      "style",
-      "doc",
-      "docs",
-    ];
-
     // https://octokit.github.io/rest.js/v18#issues-list-labels-on-issue
     const prOpenedLabels = await extension.octokit.issues
       .listLabelsOnIssue({
@@ -92,7 +94,7 @@ async function handler(
       .then((res) => res.data);
 
     if (prOpenedLabels.length == 0) {
-      const labels = defaultLables
+      var labels = defaultLables
         .filter((label: string) =>
           metadata.pull_request.title.startsWith(label)
         )
@@ -108,6 +110,14 @@ async function handler(
         }) in ${metadata.repo} is missing labels; added ${JSON.stringify(
           labels
         )}`;
+
+        // check if "not-yet-tested" is eligible to be added
+        labels =
+          strictLabels.filter((label) =>
+            metadata.pull_request.title.startsWith(label)
+          ).length > 0
+            ? [...labels, "not-yet-tested"]
+            : labels;
 
         // https://octokit.github.io/rest.js/v18#issues-add-labels
         await extension.octokit.issues.addLabels({
@@ -125,22 +135,12 @@ async function handler(
         ]);
       }
     }
-  } catch (err) {
-    return { result: "Ops something goes wrong.", error: JSON.stringify(err) };
+  } catch (err: any) {
+    return { result: "Ops something goes wrong.", error: err };
   }
 
   // case_#3: assign daebot as one of the reviewers
   try {
-    const defaultLables = [
-      "fix",
-      "hotfix",
-      "feat",
-      "feature",
-      "patch",
-      "ci",
-      "optimize",
-      "refactor",
-    ];
     if (
       defaultLables.filter((label: string) =>
         metadata.pull_request.title.startsWith(label)
@@ -155,8 +155,8 @@ async function handler(
         reviewers: ["dae-bot[bot]"],
       });
     }
-  } catch (err) {
-    return { result: "Ops something goes wrong.", error: JSON.stringify(err) };
+  } catch (err: any) {
+    return { result: "Ops something goes wrong.", error: err };
   }
 
   return { result: "ok!" };
