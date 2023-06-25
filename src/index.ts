@@ -1,18 +1,20 @@
-import kv from "@vercel/kv";
+import { kv } from "@vercel/kv";
 import { Buffer } from "buffer";
 import * as Duration from "iso8601-duration";
 import { Context, Probot } from "probot";
 import { v4 as uuidv4 } from "uuid";
 import { TelegramClient } from "./telegram";
+import { Run } from "./runner";
 
 const Encode = (data: string): string =>
   // ensure utf-8 format
   decodeURIComponent(Buffer.from(data, "binary").toString("base64"));
 
 export default (app: Probot) => {
-  app.log("The app is loaded successfully!");
+  app.log(`${process.env.BOT_NAME} app is loaded successfully!`);
 
   // on receive push event
+  app.log;
   app.on("push", async (context: Context<"push">) => {
     const head_commit = JSON.stringify(context.payload?.head_commit);
     app.log.info(`received a push event: ${head_commit}`);
@@ -68,7 +70,7 @@ export default (app: Probot) => {
       const msg = `🏗️ a new commit was pushed to dae-wing (${metadata.default_branch}); dispatched ${daedSyncBranch} workflow for daed; url: ${latestRunUrl}`;
       app.log.info(msg);
 
-      const tg = new TelegramClient(context as unknown as Context);
+      const tg = new TelegramClient();
       await tg.sendMsg(msg, [
         process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
       ]);
@@ -136,7 +138,7 @@ export default (app: Probot) => {
       // 1.6 audit event
       app.log.info(msg);
 
-      const tg = new TelegramClient(context as unknown as Context);
+      const tg = new TelegramClient();
       await tg.sendMsg(msg, [
         process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
       ]);
@@ -355,7 +357,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
         msg = msg += `; PR [#${pr.number}](${pr.html_url})`;
         app.log.info(msg);
 
-        const tg = new TelegramClient(context as unknown as Context);
+        const tg = new TelegramClient();
         await tg.sendMsg(msg, [
           process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
         ]);
@@ -364,24 +366,9 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
   );
 
   // on receive star event
-  app.on("star.created", async (context: Context<"star.created">) => {
-    const payload = context.payload.repository;
-    const actualStars = await kv.get<string>(`${payload.name}.stars`);
-    if (!actualStars) {
-      app.log.error("key does not exist");
-      return;
-    }
-
-    if (payload.stargazers_count > Number.parseInt(actualStars)) {
-      await kv.set(`${payload.name}.stars`, payload.stargazers_count);
-      const msg = `⭐ Repo: ${payload.name} received a new star from [@${context.payload.sender.login}](${context.payload.sender.html_url})! Total stars: ${payload.stargazers_count}`;
-      app.log.info(msg);
-
-      const tg = new TelegramClient(context as unknown as Context);
-      await tg.sendMsg(msg, [
-        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
-      ]);
-    }
+  app.on("star.created", async (context: any) => {
+    const result = await Run(context, app, "star.created");
+    app.log.info(JSON.stringify(result));
   });
 
   // on receive pull_request.opened event
@@ -425,7 +412,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
       app.log.info(msg);
 
-      const tg = new TelegramClient(context as unknown as Context);
+      const tg = new TelegramClient();
       await tg.sendMsg(msg, [
         process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
       ]);
@@ -485,7 +472,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
           // 1.2 audit event
           app.log.info(msg);
 
-          const tg = new TelegramClient(context as unknown as Context);
+          const tg = new TelegramClient();
           await tg.sendMsg(msg, [
             process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
           ]);
@@ -594,7 +581,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
         // 1.5 audit event
         app.log.info(msg);
 
-        const tg = new TelegramClient(context as unknown as Context);
+        const tg = new TelegramClient();
         await tg.sendMsg(msg, [
           process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
         ]);
@@ -638,7 +625,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
         app.log.info(msg);
 
-        const tg = new TelegramClient(context as unknown as Context);
+        const tg = new TelegramClient();
         await tg.sendMsg(msg, [
           process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
         ]);
@@ -701,7 +688,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
         app.log.info(msg);
 
-        const tg = new TelegramClient(context as unknown as Context);
+        const tg = new TelegramClient();
         await tg.sendMsg(msg, [
           process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
         ]);
@@ -739,7 +726,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
     app.log.info(msg);
 
-    const tg = new TelegramClient(context as unknown as Context);
+    const tg = new TelegramClient();
     const {
       TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID,
       TELEGRAM_DAEUNIVERSE_CHANNEL_ID,
