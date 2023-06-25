@@ -52,7 +52,7 @@ async function handler(
       await kv.set(key, JSON.stringify(metadata));
 
       // 1.2 audit event
-      const msg = `🚀 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up`;
+      const msg = `🚀 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up.`;
 
       app.log.info(msg);
 
@@ -114,7 +114,7 @@ async function handler(
         );
 
       // 1.4 audit event
-      const msg = `🌌 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) associated with ${metadata.pull_request.ref} has been merged; created and pushed a new release tag ${tag}; release build is now kicked off! just chill, we are getting there 💪; workflow run: ${workflowRunUrl}`;
+      const msg = `🌌 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) associated with ${metadata.pull_request.ref} has been merged; created and pushed a new release tag ${tag}; release build is now kicked off! just chill, we are getting there 💪; workflow run: ${workflowRunUrl}.`;
 
       app.log.info(msg);
 
