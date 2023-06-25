@@ -1,13 +1,10 @@
-import { Context } from "probot";
 import { Telegram } from "telegraf";
 
 export class TelegramClient {
   telegram: Telegram;
-  context: Context;
 
-  constructor(context: Context) {
+  constructor() {
     this.telegram = new Telegram(process.env.TELEGRAM_BOT_TOKEN!);
-    this.context = context;
   }
 
   sendMsg(msg: string, channels: string[]) {
