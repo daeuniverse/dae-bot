@@ -28,6 +28,7 @@ async function handler(
     pull_request: {
       ref: context.payload.pull_request.head.ref,
       sha: context.payload.pull_request.head.sha,
+      title: context.payload.pull_request.title,
       author: context.payload.pull_request.user.login,
       number: context.payload.pull_request.number,
       updated_at: context.payload.pull_request.updated_at,
@@ -95,7 +96,7 @@ async function handler(
       lastPRCommiter != "GitHub" &&
       status == "diverged"
     ) {
-      const msg = `🚗 PR [#${metadata.pull_request.number}](${metadata.pull_request.html_url}) is currently out-of-sync in ${metadata.repo}; automatically merge origin/${metadata.default_branch} to keep it up-to-date; url: ${metadata.pull_request.html_url}`;
+      const msg = `🚗 PR [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) is currently out-of-sync in ${metadata.repo}; automatically merge origin/${metadata.default_branch} to keep it up-to-date; url: ${metadata.pull_request.html_url}`;
 
       // 1.3 write a comment to pr_branch if it is out-of-sync
       // https://octokit.github.io/rest.js/v18#pulls-create-review-comment
