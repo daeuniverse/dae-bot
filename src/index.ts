@@ -72,7 +72,7 @@ export default (app: Probot) => {
 
       const tg = new TelegramClient();
       await tg.sendMsg(msg, [
-        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
       ]);
     }
 
@@ -140,7 +140,7 @@ export default (app: Probot) => {
 
       const tg = new TelegramClient();
       await tg.sendMsg(msg, [
-        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
       ]);
     }
   });
@@ -359,7 +359,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
         const tg = new TelegramClient();
         await tg.sendMsg(msg, [
-          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
         ]);
       }
     }
@@ -414,7 +414,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
       const tg = new TelegramClient();
       await tg.sendMsg(msg, [
-        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
       ]);
 
       // case_#2: automatically assign label if not present, default label should align with "kind" as part of the pr title
@@ -474,7 +474,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
           const tg = new TelegramClient();
           await tg.sendMsg(msg, [
-            process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+            process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
           ]);
         }
       }
@@ -583,7 +583,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
         const tg = new TelegramClient();
         await tg.sendMsg(msg, [
-          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
         ]);
       }
     }
@@ -627,7 +627,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
         const tg = new TelegramClient();
         await tg.sendMsg(msg, [
-          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
         ]);
       }
 
@@ -690,7 +690,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
 
         const tg = new TelegramClient();
         await tg.sendMsg(msg, [
-          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+          process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
         ]);
       }
     }
@@ -733,8 +733,8 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
     } = process.env;
 
     await tg.sendMsg(msg, [
-      TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID || "",
-      TELEGRAM_DAEUNIVERSE_CHANNEL_ID || "",
+      TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
+      TELEGRAM_DAEUNIVERSE_CHANNEL_ID!,
     ]);
   });
 };
