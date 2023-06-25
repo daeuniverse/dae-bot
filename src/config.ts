@@ -6,6 +6,7 @@ import PullRequestCloseHandler from "./events/pull_request.closed";
 import PullRequestSynchronizeHandler from "./events/pull_request.syncronize";
 import IssueCloseHandler from "./events/issues.closed";
 import IssueOpenHandler from "./events/issues.opened";
+import IssueCommentCreateHandler from "./events/issue_comment.created";
 
 export interface Configuration {
   app_name: string;
@@ -19,6 +20,7 @@ export const Handlers: HandlerModule[] = [
   PullRequestSynchronizeHandler,
   IssueCloseHandler,
   IssueOpenHandler,
+  IssueCommentCreateHandler,
 ];
 
 export const AppConfig: Configuration = {
