@@ -144,32 +144,15 @@ export default (app: Probot) => {
   });
 
   // on receive issue event
-  app.on("issues.opened", async (context: Context<"issues.opened">) => {
-    app.log.info(`received an issue event: ${context.payload.issue}`);
-    const comment = context.issue({
-      body: "Thanks for opening this issue!",
-    });
-    await context.octokit.issues.createComment(comment);
+  app.on("issues.opened", async (context: Context<any>) => {
+    const result = await Run(context, app, "issues.opened");
+    app.log.info(JSON.stringify(result));
   });
 
   // on receive issue_closed event
-  app.on("issues.closed", async (context: Context<"issues.closed">) => {
-    const metadata = {
-      repo: context.payload.repository.name,
-      owner: context.payload.organization?.login as string,
-      author: context.payload.sender.login,
-      default_branch: context.payload.repository.default_branch,
-      issue: {
-        number: context.payload.issue.number,
-        title: context.payload.issue.title,
-        author: context.payload.issue.user.login,
-        html_url: context.payload.issue.html_url,
-      },
-    };
-
-    app.log.info(
-      `received an issues.closed event: ${JSON.stringify(metadata)}`
-    );
+  app.on("issues.closed", async (context: Context<any>) => {
+    const result = await Run(context, app, "issues.closed");
+    app.log.info(JSON.stringify(result));
   });
 
   // on receive issue_comment.created event

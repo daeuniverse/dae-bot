@@ -3,6 +3,8 @@ import StarCreateHandler from "./events/star.created";
 import ReleaseHandler from "./events/release.released";
 import PullRequestOpenHandler from "./events/pull_request.opened";
 import PullRequestCloseHandler from "./events/pull_request.closed";
+import IssueCloseHandler from "./events/issues.closed";
+import IssueOpenHandler from "./events/issues.opened";
 
 export interface Configuration {
   app_name: string;
@@ -13,6 +15,8 @@ export const Handlers: HandlerModule[] = [
   ReleaseHandler,
   PullRequestOpenHandler,
   PullRequestCloseHandler,
+  IssueCloseHandler,
+  IssueOpenHandler,
 ];
 
 export const AppConfig: Configuration = {
