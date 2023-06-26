@@ -112,12 +112,22 @@ async function handler(
         )}.`;
 
         // check if "not-yet-tested" is eligible to be added
-        labels =
+        if (
           strictLabels.filter((label) =>
             metadata.pull_request.title.startsWith(label)
           ).length > 0
-            ? [...labels, "not-yet-tested"]
-            : labels;
+        ) {
+          // 1. add "not-yet-tested label"
+          labels = [...labels, "not-yet-tested"];
+          // 2. request review from qa team
+          // https://octokit.github.io/rest.js/v18#pulls-create-review-request
+          await extension.octokit.rest.pulls.requestReviewers({
+            owner: metadata.owner,
+            repo: metadata.repo,
+            pull_number: metadata.pull_request.number,
+            team_reviewers: ["qa"],
+          });
+        }
 
         // https://octokit.github.io/rest.js/v18#issues-add-labels
         await extension.octokit.issues.addLabels({
