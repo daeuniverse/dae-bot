@@ -22,7 +22,7 @@ async function handler(
 ): Promise<Result> {
   app.log.info(`received a star.created event: ${JSON.stringify(repo)}`);
 
-  const actualStars = await kv.get<string>(`${repo.name}.stars`);
+  const actualStars = await kv.get<string>(`stars.${repo.name}`);
   if (!actualStars) {
     return {
       result: "Ops something goes wrong.",
@@ -34,13 +34,13 @@ async function handler(
 
   try {
     if (payload.stargazers_count > Number.parseInt(actualStars)) {
-      await kv.set(`${repo.name}.stars`, payload.stargazers_count);
+      await kv.set(`stars.${repo.name}`, payload.stargazers_count);
       const msg = `⭐ Repo: ${payload.name} received a new star from [@${context.payload.sender.login}](${context.payload.sender.html_url})! Total stars: ${payload.stargazers_count}`;
       app.log.info(msg);
 
       // 1.2 audit event
       await extension.tg.sendMsg(msg, [
-        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID as string,
+        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
       ]);
     }
   } catch (err) {
