@@ -51,9 +51,10 @@ async function handler(
     "style",
     "doc",
     "docs",
+    "fixture",
   ];
 
-  const strictLabels = defaultLables.slice(0, -3);
+  const strictLabels = defaultLables.slice(0, -4);
 
   // case_#1: automatically assign assignee if not present
   try {
@@ -95,9 +96,7 @@ async function handler(
 
     if (prOpenedLabels.length == 0) {
       var labels = defaultLables
-        .filter((label: string) =>
-          metadata.pull_request.title.startsWith(label)
-        )
+        .filter((label: string) => metadata.pull_request.title.includes(label))
         .map((item) => {
           if (item == "feat") item = "feature";
           if (item == "docs" || item == "doc") item = "documentation";
@@ -117,16 +116,19 @@ async function handler(
             metadata.pull_request.title.startsWith(label)
           ).length > 0
         ) {
-          // 1. add "not-yet-tested label"
+          // add "not-yet-tested label"
           labels = [...labels, "not-yet-tested"];
-          // 2. request review from qa team
-          // https://octokit.github.io/rest.js/v18#pulls-create-review-request
-          // await extension.octokit.rest.pulls.requestReviewers({
-          //   owner: metadata.owner,
-          //   repo: metadata.repo,
-          //   pull_number: metadata.pull_request.number,
-          //   team_reviewers: ["qa"],
-          // });
+
+          if (["dae", "daed"].includes(metadata.repo)) {
+            // request review from qa team
+            // https://octokit.github.io/rest.js/v18#pulls-create-review-request
+            await extension.octokit.rest.pulls.requestReviewers({
+              owner: metadata.owner,
+              repo: metadata.repo,
+              pull_number: metadata.pull_request.number,
+              team_reviewers: ["qa"],
+            });
+          }
         }
 
         // https://octokit.github.io/rest.js/v18#issues-add-labels
