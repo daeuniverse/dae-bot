@@ -121,12 +121,12 @@ async function handler(
           labels = [...labels, "not-yet-tested"];
           // 2. request review from qa team
           // https://octokit.github.io/rest.js/v18#pulls-create-review-request
-          await extension.octokit.rest.pulls.requestReviewers({
-            owner: metadata.owner,
-            repo: metadata.repo,
-            pull_number: metadata.pull_request.number,
-            team_reviewers: ["qa"],
-          });
+          // await extension.octokit.rest.pulls.requestReviewers({
+          //   owner: metadata.owner,
+          //   repo: metadata.repo,
+          //   pull_number: metadata.pull_request.number,
+          //   team_reviewers: ["qa"],
+          // });
         }
 
         // https://octokit.github.io/rest.js/v18#issues-add-labels
