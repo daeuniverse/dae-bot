@@ -64,7 +64,7 @@ async function handler(
     // case_#2: create a release tag when release_branch is merged
     if (
       metadata.pull_request.merged &&
-      metadata.pull_request.ref.startsWith("release-")
+      metadata.pull_request.ref.startsWith("release-v")
     ) {
       // 1.1 get the latest commit from default_branch (main)
       // https://octokit.github.io/rest.js/v18#git-get-commit
