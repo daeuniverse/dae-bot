@@ -16,7 +16,7 @@ export default (app: Probot) => {
       "pull_request.synchronize",
       "pull_request.closed",
       "pull_request.labeled",
-      "release.released",
+      "release.published",
     ],
     async (context: Context<any>) => {
       app.log.info(

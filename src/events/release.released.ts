@@ -10,8 +10,8 @@ import {
 } from "../common";
 
 export = {
-  name: "release.released",
-  config_key: "release.released",
+  name: "release.published",
+  config_key: "release.published",
   handler: handler as Handler,
 } as HandlerModule;
 
