@@ -18,10 +18,13 @@
   "scripts": {
     "build": "tsc",
     "start": "probot run ./lib/index.js",
-    "debug": "tsc && probot run ./lib/index.js",
+    "debug": "tsc && npx probot run ./lib/index.js",
     "test": "jest"
   },
   "dependencies": {
+    "@opentelemetry/auto-instrumentations-node": "^0.37.1",
+    "@opentelemetry/exporter-metrics-otlp-proto": "^0.40.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.40.0",
     "@types/uuid": "^9.0.2",
     "@vercel/kv": "^0.2.1",
     "dotenv": "^16.1.4",

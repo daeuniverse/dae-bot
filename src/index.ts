@@ -1,8 +1,14 @@
+import opentelemetry from "@opentelemetry/api";
+import { Span } from "@opentelemetry/api";
 import { Context, Probot } from "probot";
 import { Run } from "./runner";
+import otel from "./trace";
 
 export default (app: Probot) => {
   app.log(`${process.env.BOT_NAME} app is loaded successfully!`);
+
+  // instantiate tracing
+  otel.start();
 
   // on receive a selective range of events
   app.on(
@@ -19,14 +25,35 @@ export default (app: Probot) => {
       "release.published",
     ],
     async (context: Context<any>) => {
-      app.log.info(
-        JSON.stringify({ event: context.name, action: context.payload.action })
+      const tracer = opentelemetry.trace.getTracer(
+        process.env.APP_NAME || "dae-bot"
       );
-      const full_event = context.payload.action
-        ? `${context.name}.${context.payload.action}`
-        : context.name;
-      const result = await Run(context, app, full_event);
-      result.error ? app.log.error(result) : app.log.info(result);
+      context.id;
+      tracer.startActiveSpan(
+        "app.handler",
+        {
+          attributes: {
+            "context.event": context.name,
+            "context.action": context.payload.action,
+            "context.payload": JSON.stringify(context.payload),
+            "request.id": context.id,
+          },
+        },
+        async (span: Span) => {
+          app.log.info(
+            JSON.stringify({
+              event: context.name,
+              action: context.payload.action,
+            })
+          );
+          const full_event = context.payload.action
+            ? `${context.name}.${context.payload.action}`
+            : context.name;
+          const result = await Run(context, app, full_event);
+          result.error ? app.log.error(result) : app.log.info(result);
+          span.end();
+        }
+      );
     }
   );
 };
