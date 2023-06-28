@@ -207,9 +207,9 @@ async function handler(
 
               // 1.5 add assignee
               tracer.startActiveSpan(
-                "app.handler.push.daed_sync_upstream.create_pull_request.add_labels",
+                "app.handler.push.daed_sync_upstream.create_pull_request.add_assignee",
                 async (span: Span) => {
-                  span.setAttribute("functionality", "add labels");
+                  span.setAttribute("functionality", "add assignee");
                   // https://octokit.github.io/rest.js/v18#issues-add-assignees
                   context.octokit.issues.addAssignees({
                     owner: metadata.owner,
