@@ -20,8 +20,9 @@ export default async (context: Context<any>, app: Probot, event: string) => {
       };
 
       span.setAttributes({ repo: JSON.stringify(repo) });
+      const result = await module.handler(context, app, repo, extension);
       span.end();
-      return await module.handler(context, app, repo, extension);
+      return result;
     }
   );
 };
