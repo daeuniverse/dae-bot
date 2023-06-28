@@ -30,7 +30,7 @@ export default (app: Probot) => {
       );
       context.id;
       tracer.startActiveSpan(
-        "app.handler",
+        `app.event.${context.name}`,
         {
           attributes: {
             "context.event": context.name,
