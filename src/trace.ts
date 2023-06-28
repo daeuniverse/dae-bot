@@ -1,15 +1,17 @@
-import * as opentelemetry from "@opentelemetry/sdk-node";
+import opentelemetry from "@opentelemetry/api";
+import * as sdk from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 // import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+//
 
 const { Resource } = require("@opentelemetry/resources");
 const {
   SemanticResourceAttributes,
 } = require("@opentelemetry/semantic-conventions");
 
-export default new opentelemetry.NodeSDK({
+const otel = new sdk.NodeSDK({
   traceExporter: new OTLPTraceExporter({
     url: `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`,
     // optional - collection of custom headers to be sent with each request, empty by default
@@ -37,3 +39,7 @@ export default new opentelemetry.NodeSDK({
     "metadata.repo": "dae-bot",
   }),
 });
+
+const tracer = opentelemetry.trace.getTracer(process.env.APP_NAME || "dae-bot");
+
+export { otel, tracer };
