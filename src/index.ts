@@ -25,7 +25,9 @@ export default (app: Probot) => {
       "release.published",
     ],
     async (context: Context<any>) => {
-      const tracer = opentelemetry.trace.getTracer("dae-bot");
+      const tracer = opentelemetry.trace.getTracer(
+        process.env.APP_NAME || "dae-bot"
+      );
       context.id;
       tracer.startActiveSpan(
         "app.handler",
