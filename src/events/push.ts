@@ -25,7 +25,7 @@ async function handler(
   const daedSyncBranch = "sync-upstream";
 
   // instantiate span
-  tracer.startActiveSpan(
+  await tracer.startActiveSpan(
     "app.handler.push.event_logging",
     async (span: Span) => {
       const logs = `received a push event: ${head_commit}; ref: ${context.payload.ref}; repo: ${repo.name}`;
