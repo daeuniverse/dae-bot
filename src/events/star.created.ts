@@ -17,7 +17,7 @@ export = {
 } as HandlerModule;
 
 async function handler(
-  context: Context<"star.created">,
+  context: Context<any>,
   app: Probot,
   repo: Repository,
   extension: Extension
