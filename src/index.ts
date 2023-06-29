@@ -1,6 +1,6 @@
+import run from "./runner";
 import { Span } from "@opentelemetry/api";
 import { Context, Probot } from "probot";
-import run from "./runner";
 import { otel, tracer } from "./trace";
 
 export default (app: Probot) => {
@@ -24,7 +24,7 @@ export default (app: Probot) => {
       "release.published",
     ],
     async (context: Context<any>) => {
-      tracer.startActiveSpan(
+      await tracer.startActiveSpan(
         `app.event.${context.name}`,
         {
           attributes: {
