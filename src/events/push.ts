@@ -108,6 +108,7 @@ async function handler(
           span.setAttribute("functionality", "audit event");
           const msg = `🏗️ a new commit was pushed to dae-wing (${metadata.default_branch}); dispatched ${daedSyncBranch} workflow for daed; url: ${latestRunUrl}`;
           app.log.info(msg);
+          span.addEvent(msg);
           await extension.tg.sendMsg(msg, [
             process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
           ]);
@@ -231,6 +232,7 @@ async function handler(
         async (span: Span) => {
           span.setAttribute("functionality", "audit event");
           app.log.info(msg);
+          span.addEvent(msg);
           await extension.tg.sendMsg(msg, [
             process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
           ]);
@@ -238,8 +240,8 @@ async function handler(
         }
       );
     }
-  } catch (err) {
-    return { result: "Ops something goes wrong.", error: JSON.stringify(err) };
+  } catch (err: any) {
+    return { result: "Ops something goes wrong.", error: err };
   }
 
   return { result: "ok!" };
