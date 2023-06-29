@@ -24,11 +24,15 @@ export default (app: Probot) => {
       "release.published",
     ],
     async (context: Context<any>) => {
+      const full_event = context.payload.action
+        ? `${context.name}.${context.payload.action}`
+        : context.name;
       await tracer.startActiveSpan(
-        `app.event.${context.name}`,
+        `app.event.${full_event}`,
         {
           attributes: {
             "context.event": context.name,
+            "context.full_event": full_event,
             "context.action": context.payload.action,
             "context.payload": JSON.stringify(context.payload),
             "request.id": context.id,
@@ -41,11 +45,6 @@ export default (app: Probot) => {
               action: context.payload.action,
             })
           );
-
-          const full_event = context.payload.action
-            ? `${context.name}.${context.payload.action}`
-            : context.name;
-          span.setAttribute("context.full_event", full_event);
 
           const result = await run(context, app, full_event);
           result.error ? app.log.error(result) : app.log.info(result);
