@@ -7,8 +7,8 @@ export class TelegramClient {
     this.telegram = new Telegram(process.env.TELEGRAM_BOT_TOKEN!);
   }
 
-  sendMsg(msg: string, channels: string[]) {
-    return Promise.all(
+  async sendMsg(msg: string, channels: string[]) {
+    Promise.all(
       channels.map((chat) => {
         this.telegram.sendMessage(chat, msg, {
           parse_mode: "Markdown",
