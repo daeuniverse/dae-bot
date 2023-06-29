@@ -1,8 +1,7 @@
-import opentelemetry from "@opentelemetry/api";
+import run from "./runner";
 import { Span } from "@opentelemetry/api";
 import { Context, Probot } from "probot";
-import { Run } from "./runner";
-import otel from "./trace";
+import { otel, tracer } from "./trace";
 
 export default (app: Probot) => {
   app.log(`${process.env.BOT_NAME} app is loaded successfully!`);
@@ -25,11 +24,7 @@ export default (app: Probot) => {
       "release.published",
     ],
     async (context: Context<any>) => {
-      const tracer = opentelemetry.trace.getTracer(
-        process.env.APP_NAME || "dae-bot"
-      );
-      context.id;
-      tracer.startActiveSpan(
+      await tracer.startActiveSpan(
         `app.event.${context.name}`,
         {
           attributes: {
@@ -46,10 +41,13 @@ export default (app: Probot) => {
               action: context.payload.action,
             })
           );
+
           const full_event = context.payload.action
             ? `${context.name}.${context.payload.action}`
             : context.name;
-          const result = await Run(context, app, full_event);
+          span.setAttribute("context.full_event", full_event);
+
+          const result = await run(context, app, full_event);
           result.error ? app.log.error(result) : app.log.info(result);
           span.end();
         }
