@@ -1,18 +1,12 @@
-import opentelemetry, {
-  diag,
-  DiagConsoleLogger,
-  DiagLogLevel,
-} from "@opentelemetry/api";
+import opentelemetry from "@opentelemetry/api";
 import * as sdk from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 // import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 // import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 // import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+
 import { Resource } from "@opentelemetry/resources";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
-
-// For troubleshooting, set the log level to DiagLogLevel.DEBUG
-diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
 
 const otel = new sdk.NodeSDK({
   traceExporter: new OTLPTraceExporter({
