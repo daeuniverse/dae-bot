@@ -64,6 +64,14 @@ async function handler(
     }
 
     if (metadata.stargazers_count > Number.parseInt(actualStars)) {
+      await tracer.startActiveSpan(
+        "app.handler.star.created.metadata)",
+        async (span: Span) => {
+          span.setAttribute("metadata", JSON.stringify(metadata));
+          span.end();
+        }
+      );
+
       // 1.3 store current stargazers_count to kv
       await tracer.startActiveSpan(
         "app.handler.star.created.increment_stargazers_count",
