@@ -8,13 +8,13 @@ export class TelegramClient {
   }
 
   async sendMsg(msg: string, channels: string[]) {
-    Promise.all(
-      channels.map((chat) => {
+    return await Promise.all(
+      channels.map((chat) =>
         this.telegram.sendMessage(chat, msg, {
           parse_mode: "Markdown",
           disable_web_page_preview: true,
-        });
-      })
+        })
+      )
     );
   }
 }
