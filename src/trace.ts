@@ -39,8 +39,6 @@ const otel = new sdk.NodeSDK({
   }),
 });
 
-const tracer = opentelemetry.trace.getTracer(
-  process.env.APP_NAME || "dae-bot"
-);
+const tracer = opentelemetry.trace.getTracer(process.env.APP_NAME || "dae-bot");
 
-export {otel, tracer}
+export { otel, tracer };

@@ -51,7 +51,7 @@ async function handler(
         head_commit: head_commit,
       };
 
-      tracer.startActiveSpan(
+      await tracer.startActiveSpan(
         "app.handler.push.daed_sync_upstream.metadata",
         async (span: Span) => {
           span.setAttributes({
@@ -63,7 +63,7 @@ async function handler(
       );
 
       // 1.2 trigger daed sync-upstream-source workflow
-      const latestRunUrl = tracer.startActiveSpan(
+      const latestRunUrl = await tracer.startActiveSpan(
         "app.handler.push.daed_sync_upstream.trigger_workflow",
         async (span: Span) => {
           span.setAttribute(
@@ -102,7 +102,7 @@ async function handler(
       );
 
       // 1.4 audit event
-      tracer.startActiveSpan(
+      await tracer.startActiveSpan(
         "app.handler.push.daed-sync-upstream.audit_event",
         async (span: Span) => {
           span.setAttribute("functionality", "audit event");
@@ -136,7 +136,7 @@ async function handler(
         head_branch: context.payload.ref.split("/")[2],
       };
 
-      tracer.startActiveSpan(
+      await tracer.startActiveSpan(
         "app.handler.push.daed_sync_upstream.metadata",
         async (span: Span) => {
           span.setAttributes({
@@ -148,7 +148,7 @@ async function handler(
       );
 
       // 1.2 fetch latest sync-upstream workflow run
-      const latestWorkflowRun = tracer.startActiveSpan(
+      const latestWorkflowRun = await tracer.startActiveSpan(
         "app.handler.push.daed_sync_upstream.fetch_latest_workflow_run",
         async (span: Span) => {
           span.setAttribute(
@@ -171,7 +171,7 @@ async function handler(
 
       // 1.3 create a pull_request with head (sync-upstream) and base (main) for daed
       const msg = `⏳ daed (origin/${metadata.default_branch}) is currently out-of-sync to dae-wing (origin/${metadata.default_branch}); changes are proposed by @daebot in actions - ${latestWorkflowRun}`;
-      tracer.startActiveSpan(
+      await tracer.startActiveSpan(
         "app.handler.push.daed_sync_upstream.create_pull_request",
         async (span: Span) => {
           span.setAttribute(
@@ -199,7 +199,7 @@ async function handler(
                     owner: metadata.owner,
                     repo: metadata.repo,
                     issue_number: res.data.number,
-                    labels: ["automated-pr"],
+                    labels: ["automated-pr", "chore"],
                   });
                   span.end();
                 }
@@ -226,7 +226,7 @@ async function handler(
       );
 
       // 1.6 audit event
-      tracer.startActiveSpan(
+      await tracer.startActiveSpan(
         "app.handler.push.daed-sync-upstream.audit_event",
         async (span: Span) => {
           span.setAttribute("functionality", "audit event");
