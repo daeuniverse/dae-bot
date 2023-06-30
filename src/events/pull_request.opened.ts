@@ -102,7 +102,7 @@ async function handler(
           if (item == "docs" || item == "doc") item = "documentation";
           return item;
         });
-      if (labels.some((i) => ["fixture", "fix"].includes(i))) {
+      if (["fixture", "fix"].every((i) => labels.includes(i))) {
         labels = labels.filter((label: string) => label != "fix");
       }
 
