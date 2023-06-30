@@ -42,7 +42,7 @@ async function handler(
 
   // instantiate span
   await tracer.startActiveSpan(
-    "app.handler.pull_request.closed.event_logging",
+    "app.handler.pull_request.closed",
     async (span: Span) => {
       const logs = `received a pull_request.closed event: ${JSON.stringify(
         metadata
@@ -94,7 +94,7 @@ async function handler(
 
           // 1.2 audit event
           await tracer.startActiveSpan(
-            "app.handler.pull_request.merged.store_metricss.audit_event",
+            "app.handler.pull_request.merged.store_metrics.audit_event",
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
               const msg = `🚀 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up.`;
@@ -106,14 +106,14 @@ async function handler(
               span.end();
             }
           );
+
+          span.end;
+          return { result: "ok!" };
         } catch (err: any) {
-          span.recordException(err);
-          span.setStatus({ code: SpanStatusCode.ERROR });
+          // span.recordException(err);
+          // span.setStatus({ code: SpanStatusCode.ERROR });
           return { result: "Ops something goes wrong.", error: err };
         }
-
-        span.end;
-        return { result: "ok!" };
       }
     );
   }

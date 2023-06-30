@@ -260,7 +260,7 @@ async function handler(
 
           // 1.6 audit event
           await tracer.startActiveSpan(
-            "app.handler.push.daed-sync-upstream.audit_event",
+            "app.handler.push.daed_sync_upstream.audit_event",
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
               app.log.info(msg);
