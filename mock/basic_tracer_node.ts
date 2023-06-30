@@ -1,5 +1,4 @@
-"use strict";
-
+// ref: https://github.com/open-telemetry/opentelemetry-js/blob/main/examples/basic-tracer-node/index.js
 import opentelemetry, { Span } from "@opentelemetry/api";
 import { Resource } from "@opentelemetry/resources";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";

@@ -1,30 +1,27 @@
 import { Octokit } from "octokit";
-import opentelemetry, { Span, SpanStatusCode } from "@opentelemetry/api";
 import { Resource } from "@opentelemetry/resources";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
+import opentelemetry, { Span, SpanStatusCode } from "@opentelemetry/api";
 import {
-  BasicTracerProvider,
   ConsoleSpanExporter,
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 
-const provider = new BasicTracerProvider({
+const provider = new NodeTracerProvider({
   resource: new Resource({
     [SemanticResourceAttributes.SERVICE_NAME]: "basic-tracer",
   }),
 });
+const defaultSpanProcessor = new SimpleSpanProcessor(
+  new OTLPTraceExporter({
+    url: `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`,
+  })
+);
 
-// Configure span processor to send spans to the exporter
-const exporter = new OTLPTraceExporter({
-  url: `${process.env.OTEL_EXPORTER_OTLP_ENDPOINT}/v1/traces`,
-  // optional - collection of custom headers to be sent with each request, empty by default
-  headers: {},
-});
-
-provider.addSpanProcessor(new SimpleSpanProcessor(exporter));
+provider.addSpanProcessor(defaultSpanProcessor);
 provider.addSpanProcessor(new SimpleSpanProcessor(new ConsoleSpanExporter()));
-
 /**
  * Initialize the OpenTelemetry APIs to use the BasicTracerProvider bindings.
  *
