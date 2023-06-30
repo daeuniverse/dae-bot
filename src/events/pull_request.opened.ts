@@ -96,15 +96,14 @@ async function handler(
 
     if (prOpenedLabels.length == 0) {
       var labels = defaultLables
-        .filter((label: string) => metadata.pull_request.title.includes(label))
+        .filter((label: string) =>
+          metadata.pull_request.title.startsWith(label)
+        )
         .map((item) => {
           if (item == "feat") item = "feature";
           if (item == "docs" || item == "doc") item = "documentation";
           return item;
         });
-      if (["fixture", "fix"].every((i) => labels.includes(i))) {
-        labels = labels.filter((label: string) => label != "fix");
-      }
 
       if (labels.length > 0) {
         const msg = `🏷 PR - [#${metadata.pull_request.number}](${
