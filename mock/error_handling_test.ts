@@ -1,13 +1,22 @@
 import { Octokit } from "octokit";
 import { Resource } from "@opentelemetry/resources";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
-import opentelemetry, { Span, SpanStatusCode } from "@opentelemetry/api";
+import opentelemetry, {
+  diag,
+  DiagConsoleLogger,
+  DiagLogLevel,
+  Span,
+  SpanStatusCode,
+} from "@opentelemetry/api";
 import {
   ConsoleSpanExporter,
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
+
+// For troubleshooting, set the log level to DiagLogLevel.DEBUG
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
 const provider = new NodeTracerProvider({
   resource: new Resource({
