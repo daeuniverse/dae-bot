@@ -76,8 +76,13 @@ async function handler(
         try {
           // 1.1 store pr metrics data to kv
           await tracer.startActiveSpan(
-            "app.handler.pull_request.merged.metadata",
-            { attributes: { functionality: "store pr metrics data to kv" } },
+            "app.handler.pull_request.merged.store_metrics.store_to_kv",
+            {
+              attributes: {
+                functionality: "store pr metrics data to kv",
+                condition: "pr.merged == true",
+              },
+            },
             async (span: Span) => {
               const key = `pr.merged.${metadata.repo}.${uuidv4().slice(0, 7)}.${
                 metadata.pull_request.number
@@ -89,7 +94,7 @@ async function handler(
 
           // 1.2 audit event
           await tracer.startActiveSpan(
-            "app.handler.pull_request.merged.audit_event",
+            "app.handler.pull_request.merged.store_metricss.audit_event",
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
               const msg = `🚀 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up.`;
@@ -122,17 +127,18 @@ async function handler(
     const prerelease = tag.includes("rc") || tag.includes("p*");
 
     return await tracer.startActiveSpan(
-      "app.handler.pull_request.merged.store_metrics",
+      "app.handler.pull_request.merged.release_automation",
       {
         attributes: {
           case: "create a release tag when release_branch is merged",
+          condition: "pr.merged == true && pr.title.startsWith('release-v')",
         },
       },
       async (span: Span) => {
         try {
           // 1.1 get the latest commit from default_branch (main)
           const headCommit = await tracer.startActiveSpan(
-            "app.handler.pull_request.merged.get_head_commit",
+            "app.handler.pull_request.merged.release_automation.get_head_commit",
             {
               attributes: {
                 functionality:
@@ -157,7 +163,7 @@ async function handler(
 
           // 1.2 create a release tag when release_branch is merged
           await tracer.startActiveSpan(
-            "app.handler.pull_request.merged.create_release_tag",
+            "app.handler.pull_request.merged.release_automation.create_release_tag",
             {
               attributes: {
                 functionality:
@@ -180,7 +186,7 @@ async function handler(
 
           // 1.3 kick off the release build workflow
           const workflowRunUrl = await tracer.startActiveSpan(
-            "app.handler.pull_request.merged.trigger_release_build",
+            "app.handler.pull_request.merged.release_automation.trigger_release_build",
             {
               attributes: {
                 functionality: "kick off the release build workflow",
@@ -201,7 +207,7 @@ async function handler(
                 .then(() =>
                   // get latest workflow run metadata
                   tracer.startActiveSpan(
-                    "app.handler.pull_request.merged.trigger_release_build.get_workflow_run",
+                    "app.handler.pull_request.merged.release_automation.trigger_release_build.get_workflow_run",
                     {
                       attributes: {
                         functionality: "get latest workflow run metadata",
@@ -233,7 +239,7 @@ async function handler(
 
           // 1.4 audit event
           await tracer.startActiveSpan(
-            "app.handler.pull_request.merged.audit_event",
+            "app.handler.pull_request.release_automation.merged.audit_event",
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
               const msg = `🌌 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) associated with ${metadata.pull_request.ref} has been merged; created and pushed a new release tag ${tag}; release build is now kicked off! just chill, we are getting there 💪; workflow run: ${workflowRunUrl}.`;
