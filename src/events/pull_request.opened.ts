@@ -106,12 +106,6 @@ async function handler(
         });
 
       if (labels.length > 0) {
-        const msg = `🏷 PR - [#${metadata.pull_request.number}](${
-          metadata.pull_request.html_url
-        }) in ${metadata.repo} is missing labels; added ${JSON.stringify(
-          labels
-        )}.`;
-
         // check if "not-yet-tested" is eligible to be added
         if (
           strictLabels.filter((label) =>
@@ -142,6 +136,12 @@ async function handler(
         });
 
         // 1.2 audit event
+        const msg = `🏷 PR - [#${metadata.pull_request.number}](${
+          metadata.pull_request.html_url
+        }) in ${metadata.repo} is missing labels; added ${JSON.stringify(
+          labels
+        )}.`;
+
         app.log.info(msg);
 
         await extension.tg.sendMsg(msg, [
