@@ -94,11 +94,11 @@ async function handler(
       })
       .then((res) => res.data);
 
-    
     if (prOpenedLabels.length == 0) {
       let labels = defaultLables
         .filter((label: string) => {
-          const { type } = metadata.pull_request.title.match(/^(?<type>\w+)(\((?<scope>.+)\))?:/)?.groups;
+          const re = /^(?<type>\w+)(\((?<scope>.+)\))?:/;
+          const { type } = metadata.pull_request.title.match(re)?.groups!;
           return type === label;
         })
         .map((item) => {
