@@ -95,10 +95,12 @@ async function handler(
       .then((res) => res.data);
 
     if (prOpenedLabels.length == 0) {
-      var labels = defaultLables
-        .filter((label: string) =>
-          metadata.pull_request.title.startsWith(label)
-        )
+      let labels = defaultLables
+        .filter((label: string) => {
+          const re = /^(?<type>\w+)(\((?<scope>.+)\))?:/;
+          const { type } = metadata.pull_request.title.match(re)?.groups!;
+          return type === label;
+        })
         .map((item) => {
           if (item == "feat") item = "feature";
           if (item == "docs" || item == "doc") item = "documentation";
