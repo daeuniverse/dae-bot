@@ -1,14 +1,11 @@
 import opentelemetry from "@opentelemetry/api";
 import * as sdk from "@opentelemetry/sdk-node";
+import { Resource } from "@opentelemetry/resources";
+import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 // import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 // import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 // import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
-
-const { Resource } = require("@opentelemetry/resources");
-const {
-  SemanticResourceAttributes,
-} = require("@opentelemetry/semantic-conventions");
 
 const otel = new sdk.NodeSDK({
   traceExporter: new OTLPTraceExporter({
