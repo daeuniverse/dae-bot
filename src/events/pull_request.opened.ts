@@ -95,9 +95,9 @@ async function handler(
       .then((res) => res.data);
 
     if (prOpenedLabels.length == 0) {
-      var labels = defaultLables
+      let labels = defaultLables
         .filter((label: string) =>
-          metadata.pull_request.title.startsWith(label)
+          metadata.pull_request.title.split(": ")[0] === label
         )
         .map((item) => {
           if (item == "feat") item = "feature";
