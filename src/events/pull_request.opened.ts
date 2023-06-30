@@ -102,6 +102,9 @@ async function handler(
           if (item == "docs" || item == "doc") item = "documentation";
           return item;
         });
+      if (labels.some((i) => ["fixture", "fix"].includes(i))) {
+        labels = labels.filter((label: string) => label != "fix");
+      }
 
       if (labels.length > 0) {
         const msg = `🏷 PR - [#${metadata.pull_request.number}](${
