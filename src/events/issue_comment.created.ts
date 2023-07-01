@@ -10,7 +10,7 @@ import { Buffer } from "buffer";
 
 const Encode = (data: string): string =>
   // ensure utf-8 format
-  decodeURIComponent(Buffer.from(data, "binary").toString("base64"));
+  decodeURIComponent(Buffer.from(data, "utf-8").toString("base64"));
 
 export = {
   name: "issue_comment.created",
@@ -52,7 +52,7 @@ async function handler(
     // case_#1: dump release changelogs to release branch (e.g. release-v0.1.0)
     // 1.1 patch new changelogs into CHANGELOGS.md with regex
     if (
-      ["dae", "daed"].includes(metadata.repo) &&
+      ["dae", "daed", "dae-1"].includes(metadata.repo) &&
       metadata.comment.body.startsWith("@daebot") &&
       metadata.comment.body.includes("release-") &&
       metadata.issue.state == "closed" &&
