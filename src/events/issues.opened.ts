@@ -1,3 +1,4 @@
+import { Span, SpanStatusCode } from "@opentelemetry/api";
 import { Probot, Context } from "probot";
 import {
   Handler,
@@ -6,6 +7,7 @@ import {
   Extension,
   Result,
 } from "../common";
+import { tracer } from "../trace";
 
 export = {
   name: "issues.opened",
@@ -32,15 +34,37 @@ async function handler(
     },
   };
 
-  app.log.info(`received an issues.opened event: ${JSON.stringify(metadata)}`);
-  try {
-    const comment = context.issue({
-      body: "Thanks for opening this issue!",
-    });
-    await extension.octokit.issues.createComment(comment);
-  } catch (err) {
-    return { result: "Ops something goes wrong.", error: JSON.stringify(err) };
-  }
+  // instantiate span
+  await tracer.startActiveSpan(
+    "app.handler.issues.opened.event_logging",
+    async (span: Span) => {
+      const logs = `received an issues.opened event: ${JSON.stringify(
+        metadata
+      )}`;
+      app.log.info(logs);
+      span.addEvent(logs);
+      span.end();
+    }
+  );
+
+  await tracer.startActiveSpan(
+    "app.handler.issues.opened.send_greeting",
+    { attributes: { functionality: "write greeting msg as comment" } },
+    async (span: Span) => {
+      try {
+        const comment = context.issue({
+          body: "Thanks for opening this issue!",
+        });
+        await extension.octokit.issues.createComment(comment);
+      } catch (err: any) {
+        app.log.error(err);
+        span.recordException(err);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+      }
+
+      span.end();
+    }
+  );
 
   return { result: "ok!" };
 }
