@@ -7,6 +7,7 @@ import {
   Extension,
   Result,
 } from "../common";
+import { defaultLables, strictLabels } from "../constant";
 import { tracer } from "../trace";
 
 export = {
@@ -36,23 +37,6 @@ async function handler(
       html_url: context.payload.pull_request.html_url,
     },
   };
-  const defaultLables = [
-    "fix",
-    "feat",
-    "feature",
-    "patch",
-    "ci",
-    "optimize",
-    "chore",
-    "refactor",
-    "style",
-    "doc",
-    "docs",
-    "fixture",
-  ];
-
-  const strictLabels = defaultLables.slice(0, -4);
-
   await tracer.startActiveSpan(
     "app.handler.pull_request.opened.event_logging",
     async (span: Span) => {
