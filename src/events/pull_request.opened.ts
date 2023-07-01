@@ -84,6 +84,7 @@ async function handler(
           }
         );
 
+        // 1.2 audit event
         await tracer.startActiveSpan(
           "app.handler.pull_request.opened.assign_default_assignee.audit_event",
           {
@@ -92,7 +93,6 @@ async function handler(
             },
           },
           async (span: Span) => {
-            // 1.2 audit event
             const msg = `👷 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) is raised in ${metadata.repo}; assign @${author} as the default assignee.`;
 
             app.log.info(msg);
@@ -104,6 +104,7 @@ async function handler(
           }
         );
       } catch (err: any) {
+        app.log.error(err);
         span.recordException(err);
         span.setStatus({ code: SpanStatusCode.ERROR });
       }
@@ -296,6 +297,7 @@ async function handler(
           }
         );
       } catch (err: any) {
+        app.log.error(err);
         span.recordException(err);
         span.setStatus({ code: SpanStatusCode.ERROR });
       }
