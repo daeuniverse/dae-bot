@@ -55,10 +55,8 @@ async function handler(
 
   await tracer.startActiveSpan(
     "app.handler.pull_request.merged.metadata",
+    {attributes: {metadata: JSON.stringify(metadata)}},
     async (span: Span) => {
-      span.setAttributes({
-        metadata: JSON.stringify(metadata),
-      });
       span.end();
     }
   );
