@@ -1,5 +1,7 @@
+import { Span } from "@opentelemetry/api";
 import { Probot, Context } from "probot";
 import { Handler, HandlerModule, Repository, Result } from "../common";
+import { tracer } from "../trace";
 
 export = {
   name: "issues.closed",
@@ -25,11 +27,18 @@ async function handler(
     },
   };
 
-  app.log.info(`received an issues.closed event: ${JSON.stringify(metadata)}`);
-  try {
-  } catch (err) {
-    return { result: "Ops something goes wrong.", error: JSON.stringify(err) };
-  }
+  // instantiate span
+  await tracer.startActiveSpan(
+    "app.handler.issues.closed.event_logging",
+    async (span: Span) => {
+      const logs = `received an issues.closed event: ${JSON.stringify(
+        metadata
+      )}`;
+      app.log.info(logs);
+      span.addEvent(logs);
+      span.end();
+    }
+  );
 
   return { result: "ok!" };
 }
