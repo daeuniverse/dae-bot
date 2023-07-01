@@ -18,7 +18,7 @@ export = {
 } as HandlerModule;
 
 async function handler(
-  context: Context<any>,
+  context: Context<"pull_request.closed">,
   app: Probot,
   repo: Repository,
   extension: Extension
@@ -37,6 +37,7 @@ async function handler(
       updated_at: context.payload.pull_request.updated_at,
       html_url: context.payload.pull_request.html_url,
       merged: context.payload.pull_request.merged,
+      labels: context.payload.pull_request.labels.map((label) => label.name),
     },
   };
 
@@ -115,10 +116,12 @@ async function handler(
     );
   }
 
-  // case_#2: create a release tag when release_branch is merged
+  // case_#2: create a release tag when release_branch is merged; ONLY with release:auto tag
   if (
     metadata.pull_request.merged &&
-    metadata.pull_request.ref.startsWith("release-v")
+    metadata.pull_request.ref.startsWith("release-v") &&
+    metadata.pull_request.labels.includes("release:auto") &&
+    !metadata.pull_request.labels.includes("release:manual")
   ) {
     const tag = metadata.pull_request.ref.split("-")[1];
     const prerelease = tag.includes("rc") || tag.includes("p*");
