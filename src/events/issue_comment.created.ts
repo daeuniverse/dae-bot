@@ -197,7 +197,7 @@ ${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
         owner: metadata.owner,
         repo: metadata.repo,
         issue_number: pr.number,
-        labels: ["automated-pr", "release"],
+        labels: ["automated-pr", "release:auto"],
       });
 
       // 1.5 audit event
