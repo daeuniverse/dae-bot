@@ -1,5 +1,5 @@
 import kv from "@vercel/kv";
-import { Span } from "@opentelemetry/api";
+import { Span, SpanStatusCode } from "@opentelemetry/api";
 import { Probot, Context } from "probot";
 import {
   Handler,
@@ -22,6 +22,14 @@ async function handler(
   repo: Repository,
   extension: Extension
 ): Promise<Result> {
+  const metadata = {
+    repo: repo.name,
+    owner: repo.owner,
+    author: context.payload.sender.login,
+    default_branch: context.payload.repository.default_branch,
+    stargazers_count: context.payload.repository.stargazers_count,
+  };
+
   // instantiate span
   await tracer.startActiveSpan(
     "app.handler.star.created.event_logging",
@@ -33,76 +41,79 @@ async function handler(
     }
   );
 
-  try {
-    // 1.1 construct metadata from payload
-    const metadata = {
-      repo: repo.name,
-      owner: repo.owner,
-      author: context.payload.sender.login,
-      default_branch: context.payload.repository.default_branch,
-      stargazers_count: context.payload.repository.stargazers_count,
-    };
-
-    // 1.2 get current stargazers_count from kv
-    const actualStars = await tracer.startActiveSpan(
-      "app.handler.star.created.get_current_stargazers_count)",
-      async (span: Span) => {
-        span.setAttribute(
-          "functionality",
-          "get current stargazers_count from kv"
+  await tracer.startActiveSpan(
+    "app.handler.star.created",
+    async (span: Span) => {
+      try {
+        // metadata
+        await tracer.startActiveSpan(
+          "app.handler.star.created.metadata)",
+          { attributes: { metadata: JSON.stringify(metadata) } },
+          async (span: Span) => {
+            span.end();
+          }
         );
-        const result = await kv.get<string>(`stars.${repo.name}`);
-        span.end();
-        return result;
-      }
-    );
-    if (!actualStars) {
-      return {
-        result: "Ops something goes wrong.",
-        error: "key does not exist",
-      };
-    }
 
-    if (metadata.stargazers_count > Number.parseInt(actualStars)) {
-      await tracer.startActiveSpan(
-        "app.handler.star.created.metadata)",
-        async (span: Span) => {
-          span.setAttribute("metadata", JSON.stringify(metadata));
-          span.end();
+        // 1.2 get current stargazers_count from kv
+        const actualStars = await tracer.startActiveSpan(
+          "app.handler.star.created.get_current_stargazers_count)",
+          async (span: Span) => {
+            span.setAttribute(
+              "functionality",
+              "get current stargazers_count from kv"
+            );
+            const result = await kv.get<string>(`stars.${repo.name}`);
+            span.end();
+            return result;
+          }
+        );
+        if (!actualStars) {
+          return {
+            result: "Ops something goes wrong.",
+            error: "key does not exist",
+          };
         }
-      );
 
-      // 1.3 store current stargazers_count to kv
-      await tracer.startActiveSpan(
-        "app.handler.star.created.increment_stargazers_count",
-        async (span: Span) => {
-          span.setAttribute(
-            "functionality",
-            "store current stargazers_count to kv"
+        if (metadata.stargazers_count > Number.parseInt(actualStars)) {
+          // 1.3 store current stargazers_count to kv
+          await tracer.startActiveSpan(
+            "app.handler.star.created.increment_stargazers_count",
+            {
+              attributes: {
+                functionality: "store current stargazers_count to kv",
+              },
+            },
+            async (span: Span) => {
+              await kv.set(`stars.${repo.name}`, metadata.stargazers_count);
+              span.end();
+            }
           );
-          await kv.set(`stars.${repo.name}`, metadata.stargazers_count);
-          span.end();
-        }
-      );
 
-      // 1.4 audit event
-      await tracer.startActiveSpan(
-        "app.handler.star.created.audit_event",
-        async (span: Span) => {
-          span.setAttribute("functionality", "audit event");
-          const msg = `⭐ Repo: ${metadata.repo} received a new star from [@${context.payload.sender.login}](${context.payload.sender.html_url})! Total stars: ${metadata.stargazers_count}`;
-          app.log.info(msg);
-          await extension.tg.sendMsg(msg, [
-            process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
-          ]);
-          span.addEvent(msg);
-          span.end();
+          // 1.4 audit event
+          await tracer.startActiveSpan(
+            "app.handler.star.created.audit_event",
+            { attributes: { functionality: "audit event" } },
+            async (span: Span) => {
+              const msg = `⭐ Repo: ${metadata.repo} received a new star from [@${context.payload.sender.login}](${context.payload.sender.html_url})! Total stars: ${metadata.stargazers_count}`;
+              app.log.info(msg);
+              await extension.tg.sendMsg(msg, [
+                process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
+              ]);
+              span.addEvent(msg);
+              span.end();
+            }
+          );
         }
-      );
+      } catch (err: any) {
+        span.recordException(err);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        return { result: "Ops something goes wrong.", error: err };
+      }
+
+      span.end();
+      return { result: "ok!" };
     }
-  } catch (err: any) {
-    return { result: "Ops something goes wrong.", error: err };
-  }
+  );
 
   return { result: "ok!" };
 }
