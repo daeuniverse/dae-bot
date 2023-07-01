@@ -1,3 +1,4 @@
+import { Span, SpanStatusCode } from "@opentelemetry/api";
 import { Probot, Context } from "probot";
 import {
   Handler,
@@ -6,6 +7,8 @@ import {
   Extension,
   Result,
 } from "../common";
+import { defaultLables } from "../constant";
+import { tracer } from "../trace";
 
 export = {
   name: "pull_request.labeled",
@@ -38,52 +41,88 @@ async function handler(
     },
   };
 
-  app.log.info(
-    `received a pull_request.labeled event: ${JSON.stringify(metadata)}`
+  // instantiate span
+  await tracer.startActiveSpan(
+    "app.handler.pull_request.labeled.event_logging",
+    async (span: Span) => {
+      const logs = `received a pull_request.labeled event: ${JSON.stringify(
+        metadata
+      )}`;
+      app.log.info(logs);
+      span.addEvent(logs);
+      span.end();
+    }
   );
 
-  try {
-    // case_#1: when pr is attached to "tested" label, write a ready-to-merge comment
-    const defaultLables = [
-      "fix",
-      "hotfix",
-      "feat",
-      "feature",
-      "patch",
-      "ci",
-      "optimize",
-      "chore",
-      "refactor",
-    ];
-    if (
-      defaultLables.filter((label: string) =>
-        metadata.pull_request.title.startsWith(label)
-      ).length > 0 &&
-      metadata.label.name == "tested"
-    ) {
-      // 1.1 submit a pr review
-      // https://octokit.github.io/rest.js/v18#pulls-create-review
-      // https://docs.github.com/en/rest/pulls/reviews?apiVersion=2022-11-28#create-a-review-for-a-pull-request
-      await extension.octokit.pulls.createReview({
-        repo: metadata.repo,
-        owner: metadata.owner,
-        pull_number: metadata.pull_request.number,
-        body: "🧪 Since the PR has been fully tested, please consider merging it.",
-        commit_id: metadata.pull_request.sha,
-        event: "APPROVE",
-      });
+  // case_#1: when pr is attached to "tested" label, write a ready-to-merge comment
+  if (
+    defaultLables.filter((label: string) =>
+      metadata.pull_request.title.startsWith(label)
+    ).length > 0 &&
+    metadata.label.name == "tested"
+  ) {
+    await tracer.startActiveSpan(
+      "app.handler.pull_request.labeled.ready_to_merge",
+      {
+        attributes: {
+          case: "when pr is attached to 'tested' label, write a ready-to-merge comment",
+        },
+      },
+      async (span: Span) => {
+        try {
+          // 1.1 submit a pr review
+          await tracer.startActiveSpan(
+            "app.handler.pull_request.labeled.ready_to_merge.submit_pr_review",
+            {
+              attributes: {
+                functionality: "submit a pr review",
+              },
+            },
+            async (span: Span) => {
+              // https://octokit.github.io/rest.js/v18#pulls-create-review
+              // https://docs.github.com/en/rest/pulls/reviews?apiVersion=2022-11-28#create-a-review-for-a-pull-request
+              await extension.octokit.pulls.createReview({
+                repo: metadata.repo,
+                owner: metadata.owner,
+                pull_number: metadata.pull_request.number,
+                body: "🧪 Since the PR has been fully tested, please consider merging it.",
+                commit_id: metadata.pull_request.sha,
+                event: "APPROVE",
+              });
 
-      // 1.2 audit event
-      const msg = `🧪 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) in ${metadata.repo} has been fully tested; please consider merging it as soon as possible.`;
+              span.end();
+            }
+          );
 
-      app.log.info(msg);
+          // 1.2 audit event
+          await tracer.startActiveSpan(
+            "app.handler.pull_request.labeled.ready_to_merge.audit_event",
+            {
+              attributes: {
+                functionality: "audit event",
+              },
+            },
+            async (span: Span) => {
+              const msg = `🧪 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) in ${metadata.repo} has been fully tested; please consider merging it as soon as possible.`;
 
-      await extension.tg.sendMsg(msg, [
-        process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
-      ]);
-    }
-  } catch (err: any) {
-    return { result: "Ops something goes wrong.", error: err };
+              app.log.info(msg);
+              span.addEvent(msg);
+              await extension.tg.sendMsg(msg, [
+                process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
+              ]);
+
+              span.end();
+            }
+          );
+        } catch (err: any) {
+          app.log.error(err);
+          span.recordException(err);
+          span.setStatus({ code: SpanStatusCode.ERROR });
+        }
+
+        span.end();
+      }
+    );
   }
 
   return { result: "ok!" };
