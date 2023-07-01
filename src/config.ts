@@ -1,6 +1,6 @@
 import { HandlerModule } from "./common";
 import StarCreateHandler from "./events/star.created";
-import ReleaseHandler from "./events/release.released";
+import ReleaseHandler from "./events/release.published";
 import PullRequestOpenHandler from "./events/pull_request.opened";
 import PullRequestCloseHandler from "./events/pull_request.closed";
 import PullRequestSynchronizeHandler from "./events/pull_request.syncronize";
