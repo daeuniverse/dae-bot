@@ -18,7 +18,7 @@ export = {
 } as HandlerModule;
 
 async function handler(
-  context: Context<"pull_request.closed">,
+  context: Context<any>,
   app: Probot,
   repo: Repository,
   extension: Extension
@@ -37,7 +37,9 @@ async function handler(
       updated_at: context.payload.pull_request.updated_at,
       html_url: context.payload.pull_request.html_url,
       merged: context.payload.pull_request.merged,
-      labels: context.payload.pull_request.labels.map((label) => label.name),
+      labels: context.payload.pull_request.labels.map(
+        (label: any) => label.name
+      ),
     },
   };
 
