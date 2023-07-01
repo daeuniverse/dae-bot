@@ -68,10 +68,7 @@ async function handler(
           }
         );
         if (!actualStars) {
-          return {
-            result: "Ops something goes wrong.",
-            error: "key does not exist",
-          };
+          throw Error("key does not exist");
         }
 
         if (metadata.stargazers_count > Number.parseInt(actualStars)) {
@@ -105,13 +102,12 @@ async function handler(
           );
         }
       } catch (err: any) {
+        app.log.error(err);
         span.recordException(err);
         span.setStatus({ code: SpanStatusCode.ERROR });
-        return { result: "Ops something goes wrong.", error: err };
       }
 
       span.end();
-      return { result: "ok!" };
     }
   );
 

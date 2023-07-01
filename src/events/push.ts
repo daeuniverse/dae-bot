@@ -40,7 +40,7 @@ async function handler(
     context.payload.ref == "refs/heads/main" &&
     context.payload.repository.name == "dae-wing"
   ) {
-    return await tracer.startActiveSpan(
+    await tracer.startActiveSpan(
       "app.handler.push.daed_sync_upstream",
       {
         attributes: {
@@ -122,16 +122,12 @@ async function handler(
             }
           );
         } catch (err: any) {
+          app.log.error(err);
           span.recordException(err);
           span.setStatus({ code: SpanStatusCode.ERROR });
-          return {
-            result: "Ops something goes wrong.",
-            error: err,
-          };
         }
 
         span.end();
-        return { result: "ok!" };
       }
     );
   }
@@ -142,7 +138,7 @@ async function handler(
     context.payload.repository.name == "daed" &&
     context.payload.ref.split("/")[2] == daedSyncBranch
   ) {
-    return await tracer.startActiveSpan(
+    await tracer.startActiveSpan(
       "app.handler.push.daed_sync_upstream",
       async (span: Span) => {
         span.setAttributes({
@@ -272,13 +268,12 @@ async function handler(
             }
           );
         } catch (err: any) {
+          app.log.error(err);
           span.recordException(err);
           span.setStatus({ code: SpanStatusCode.ERROR });
-          return { result: "Ops something goes wrong.", error: err };
         }
 
         span.end();
-        return { result: "ok!" };
       }
     );
   }

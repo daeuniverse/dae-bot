@@ -42,7 +42,7 @@ async function handler(
 
   // instantiate span
   await tracer.startActiveSpan(
-    "app.handler.pull_request.closed",
+    "app.handler.pull_request.closed.event_logging",
     async (span: Span) => {
       const logs = `received a pull_request.closed event: ${JSON.stringify(
         metadata
@@ -55,7 +55,7 @@ async function handler(
 
   await tracer.startActiveSpan(
     "app.handler.pull_request.merged.metadata",
-    {attributes: {metadata: JSON.stringify(metadata)}},
+    { attributes: { metadata: JSON.stringify(metadata) } },
     async (span: Span) => {
       span.end();
     }
@@ -63,7 +63,7 @@ async function handler(
 
   // case_#1: store pr metrics data to kv when closed
   if (metadata.pull_request.merged) {
-    return await tracer.startActiveSpan(
+    await tracer.startActiveSpan(
       "app.handler.pull_request.merged.store_metrics",
       {
         attributes: {
@@ -97,21 +97,20 @@ async function handler(
             async (span: Span) => {
               const msg = `🚀 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) in ${metadata.repo} has been merged into ${metadata.default_branch}; good job guys, let's keep it up.`;
               app.log.info(msg);
+              span.addEvent(msg);
               await extension.tg.sendMsg(msg, [
                 process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
               ]);
-              span.addEvent(msg);
               span.end();
             }
           );
-
-          span.end;
-          return { result: "ok!" };
         } catch (err: any) {
-          // span.recordException(err);
-          // span.setStatus({ code: SpanStatusCode.ERROR });
-          return { result: "Ops something goes wrong.", error: err };
+          app.log.error(err);
+          span.recordException(err);
+          span.setStatus({ code: SpanStatusCode.ERROR });
         }
+
+        span.end();
       }
     );
   }
@@ -124,7 +123,7 @@ async function handler(
     const tag = metadata.pull_request.ref.split("-")[1];
     const prerelease = tag.includes("rc") || tag.includes("p*");
 
-    return await tracer.startActiveSpan(
+    await tracer.startActiveSpan(
       "app.handler.pull_request.merged.release_automation",
       {
         attributes: {
@@ -242,21 +241,20 @@ async function handler(
             async (span: Span) => {
               const msg = `🌌 PR - [#${metadata.pull_request.number}: ${metadata.pull_request.title}](${metadata.pull_request.html_url}) associated with ${metadata.pull_request.ref} has been merged; created and pushed a new release tag ${tag}; release build is now kicked off! just chill, we are getting there 💪; workflow run: ${workflowRunUrl}.`;
               app.log.info(msg);
+              span.addEvent(msg);
               await extension.tg.sendMsg(msg, [
                 process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
               ]);
-              span.addEvent(msg);
               span.end();
             }
           );
         } catch (err: any) {
+          app.log.error(err);
           span.recordException(err);
           span.setStatus({ code: SpanStatusCode.ERROR });
-          return { result: "Ops something goes wrong.", error: err };
         }
 
         span.end();
-        return { result: "ok!" };
       }
     );
   }
