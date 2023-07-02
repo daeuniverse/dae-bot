@@ -61,6 +61,7 @@ async function handler(
         owner: metadata.owner,
         ref: metadata.pull_request.ref,
       }),
+      // 1.1.3 get head commit of the remote_branch
       // https://octokit.github.io/rest.js/v18#git-get-commit
       extension.octokit.repos.getCommit({
         repo: metadata.repo,

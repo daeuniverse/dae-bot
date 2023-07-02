@@ -278,6 +278,8 @@ async function handler(
     );
   }
 
+  // case_#3: check if pr_branch is up-to-date, if not, merge remote HEAD branch (default_branch) to the pr branch
+
   // fallback
   return { result: "ok!" };
 }
