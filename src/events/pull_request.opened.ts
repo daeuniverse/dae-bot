@@ -307,38 +307,38 @@ async function handler(
   );
 
   // case_#3: assign daebot as one of the reviewers
-  if (
-    strictLabels.filter((label: string) =>
-      metadata.pull_request.title.startsWith(label)
-    ).length > 0
-  ) {
-    await tracer.startActiveSpan(
-      "app.handler.pull_request.opened.assign_dae_bot_as_reviewers",
-      {
-        attributes: {
-          case: "assign daebot as one of the reviewers",
-        },
-      },
-      async (span: Span) => {
-        try {
-          // 1.1 assign daebot as one of the reviewers
-          // https://octokit.github.io/rest.js/v18#pulls-request-reviewers
-          await extension.octokit.pulls.requestReviewers({
-            repo: metadata.repo,
-            owner: metadata.owner,
-            pull_number: metadata.pull_request.number,
-            reviewers: ["dae-bot[bot]"],
-          });
-        } catch (err: any) {
-          app.log(err);
-          span.recordException(err);
-          span.setStatus({ code: SpanStatusCode.ERROR });
-        }
+  // if (
+  //   strictLabels.filter((label: string) =>
+  //     metadata.pull_request.title.startsWith(label)
+  //   ).length > 0
+  // ) {
+  //   await tracer.startActiveSpan(
+  //     "app.handler.pull_request.opened.assign_dae_bot_as_reviewers",
+  //     {
+  //       attributes: {
+  //         case: "assign daebot as one of the reviewers",
+  //       },
+  //     },
+  //     async (span: Span) => {
+  //       try {
+  //         // 1.1 assign daebot as one of the reviewers
+  //         // https://octokit.github.io/rest.js/v18#pulls-request-reviewers
+  //         await extension.octokit.pulls.requestReviewers({
+  //           repo: metadata.repo,
+  //           owner: metadata.owner,
+  //           pull_number: metadata.pull_request.number,
+  //           reviewers: ["dae-bot[bot]"],
+  //         });
+  //       } catch (err: any) {
+  //         app.log(err);
+  //         span.recordException(err);
+  //         span.setStatus({ code: SpanStatusCode.ERROR });
+  //       }
 
-        span.end();
-      }
-    );
-  }
+  //       span.end();
+  //     }
+  //   );
+  // }
 
   return { result: "ok!" };
 }
