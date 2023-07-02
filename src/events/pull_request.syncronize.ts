@@ -61,9 +61,16 @@ async function handler(
         owner: metadata.owner,
         ref: metadata.pull_request.ref,
       }),
+      // https://octokit.github.io/rest.js/v18#git-get-commit
+      extension.octokit.repos.getCommit({
+        repo: metadata.repo,
+        owner: metadata.owner,
+        ref: metadata.default_branch,
+      }),
     ]);
 
-    const [commits_diff, pr_commit] = commits;
+    const [commits_diff, pr_commit, default_branch_head_commit] = commits;
+    const defaultBranchHeadRef = default_branch_head_commit.data.sha as string;
     const status = commits_diff.data.status;
     const mbCommitterDate = commits_diff.data.merge_base_commit.commit.committer
       ?.date as string;
@@ -113,7 +120,7 @@ async function handler(
         owner: metadata.owner,
         repo: metadata.repo,
         base: metadata.pull_request.ref,
-        head: metadata.default_branch,
+        head: defaultBranchHeadRef,
       });
 
       // 1.5 audit event
