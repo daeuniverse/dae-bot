@@ -38,10 +38,10 @@ async function handler(
   // case_#1 trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main
   if (
     context.payload.ref == "refs/heads/main" &&
-    context.payload.repository.name == "dae-wing"
+    context.payload.repository.name == "ci-bot-experiment"
   ) {
     await tracer.startActiveSpan(
-      "app.handler.push.daed_sync_upstream",
+      "app.handler.push.daed_sync_upstream.trigger_workflow",
       {
         attributes: {
           case: "trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main",
@@ -60,7 +60,7 @@ async function handler(
           };
 
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.metadata",
+            "app.handler.push.daed_sync_upstream.trigger_workflow.metadata",
             async (span: Span) => {
               span.setAttribute("metadata", JSON.stringify(metadata));
               span.end();
@@ -69,7 +69,7 @@ async function handler(
 
           // 1.2 trigger daed sync-upstream-source workflow
           const latestRunUrl = await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.trigger_workflow",
+            "app.handler.push.daed_sync_upstream.trigger_workflow.trigger",
             {
               attributes: {
                 functionality: "trigger daed sync-upstream-source workflow",
@@ -109,7 +109,7 @@ async function handler(
 
           // 1.4 audit event
           await tracer.startActiveSpan(
-            "app.handler.push.daed-sync-upstream.audit_event",
+            "app.handler.push.daed_sync_upstream.trigger_workflow.audit_event",
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
               const msg = `🏗️ a new commit was pushed to dae-wing (${metadata.default_branch}); dispatched ${daedSyncBranch} workflow for daed; url: ${latestRunUrl}`;
@@ -135,11 +135,11 @@ async function handler(
   // case_#2 create a pull_request when branch sync-upstream is created and pushed to daed (remote)
   if (
     context.payload.before == "0000000000000000000000000000000000000000" &&
-    context.payload.repository.name == "daed" &&
+    context.payload.repository.name == "daed-1" &&
     context.payload.ref.split("/")[2] == daedSyncBranch
   ) {
     await tracer.startActiveSpan(
-      "app.handler.push.daed_sync_upstream",
+      "app.handler.push.daed_sync_upstream.create_pr",
       async (span: Span) => {
         span.setAttributes({
           case: "create a pull_request when branch sync-upstream is created and pushed to daed (remote)",
@@ -155,7 +155,7 @@ async function handler(
           };
 
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.metadata",
+            "app.handler.push.daed_sync_upstream.create_pr.metadata",
             async (span: Span) => {
               span.setAttributes({
                 metadata: JSON.stringify(metadata),
@@ -167,7 +167,7 @@ async function handler(
 
           // 1.2 fetch latest sync-upstream workflow run
           const latestWorkflowRun = await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.fetch_latest_workflow_run",
+            "app.handler.push.daed_sync_upstream.create_pr.fetch_latest_workflow_run",
             {
               attributes: {
                 functionality: "fetch latest sync-upstream workflow run",
@@ -175,7 +175,7 @@ async function handler(
             },
             async (span: Span) => {
               // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
-              const result = await context.octokit.actions
+              const result = await extension.octokit.actions
                 .listWorkflowRuns({
                   owner: metadata.owner,
                   repo: metadata.repo,
@@ -190,8 +190,8 @@ async function handler(
 
           // 1.3 create a pull_request with head (sync-upstream) and base (main) for daed
           const msg = `⏳ daed (origin/${metadata.default_branch}) is currently out-of-sync to dae-wing (origin/${metadata.default_branch}); changes are proposed by @daebot in actions - ${latestWorkflowRun}`;
-          await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.create_pull_request",
+          const pr = await tracer.startActiveSpan(
+            "app.handler.push.daed_sync_upstream.create_pr.create",
             {
               attributes: {
                 functionality:
@@ -200,7 +200,7 @@ async function handler(
             },
             async (span: Span) => {
               // https://octokit.github.io/rest.js/v18#pulls-create
-              await context.octokit.pulls
+              return await extension.octokit.pulls
                 .create({
                   owner: metadata.owner,
                   repo: metadata.repo,
@@ -210,9 +210,9 @@ async function handler(
                   body: msg,
                 })
                 .then((res) => {
-                  // 1.4 add labels
+                  // 1.3.1 add labels
                   tracer.startActiveSpan(
-                    "app.handler.push.daed_sync_upstream.create_pull_request.add_labels",
+                    "app.handler.push.daed_sync_upstream.create_pr.pr.add_labels",
                     {
                       attributes: {
                         functionality: "add labels",
@@ -220,7 +220,7 @@ async function handler(
                     },
                     async (span: Span) => {
                       // https://octokit.github.io/rest.js/v18#issues-add-labels
-                      context.octokit.issues.addLabels({
+                      extension.octokit.issues.addLabels({
                         owner: metadata.owner,
                         repo: metadata.repo,
                         issue_number: res.data.number,
@@ -230,9 +230,9 @@ async function handler(
                     }
                   );
 
-                  // 1.5 add assignee
+                  // 1.3.2 add assignee
                   tracer.startActiveSpan(
-                    "app.handler.push.daed_sync_upstream.create_pull_request.add_assignee",
+                    "app.handler.push.daed_sync_upstream.create_pr.pr.add_assignee",
                     {
                       attributes: {
                         functionality: "add assignee",
@@ -240,7 +240,7 @@ async function handler(
                     },
                     async (span: Span) => {
                       // https://octokit.github.io/rest.js/v18#issues-add-assignees
-                      context.octokit.issues.addAssignees({
+                      await extension.octokit.issues.addAssignees({
                         owner: metadata.owner,
                         repo: metadata.repo,
                         issue_number: res.data.number,
@@ -249,14 +249,54 @@ async function handler(
                       span.end();
                     }
                   );
+
+                  return {
+                    title: res.data.title,
+                    author: res.data.user?.login,
+                    number: res.data.number,
+                    updated_at: res.data.updated_at,
+                    html_url: res.data.html_url,
+                    sha: res.data.head.sha,
+                  };
                 });
+
               span.end();
             }
           );
 
-          // 1.6 audit event
+          // 1.4 automatically merge pull_request
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.audit_event",
+            "app.handler.push.daed_sync_upstream.create_pr.auto_merge_pr",
+            {
+              attributes: { functionality: "automatically merge pull_request" },
+            },
+            async (span: Span) => {
+              // 1.4.1 create a pull_request review
+              // https://octokit.github.io/rest.js/v18#pulls-create-review
+              // https://docs.github.com/en/rest/pulls/reviews?apiVersion=2022-11-28#create-a-review-for-a-pull-request
+              await extension.octokit.pulls.createReview({
+                repo: metadata.repo,
+                owner: metadata.owner,
+                pull_number: pr.number,
+                body: "🛫 All good.",
+                commit_id: pr.sha,
+                event: "APPROVE",
+              });
+              // 1.4.2 merge pull_request
+              // https://octokit.github.io/rest.js/v18#pulls-merge
+              await extension.octokit.pulls.merge({
+                repo: metadata.repo,
+                owner: metadata.owner,
+                pull_number: pr.number,
+                merge_method: "squash",
+              });
+              span.end();
+            }
+          );
+
+          // 1.5 audit event
+          await tracer.startActiveSpan(
+            "app.handler.push.daed_sync_upstream.create_pr.audit_event",
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
               app.log.info(msg);
