@@ -209,31 +209,31 @@ async function handler(
                             )}`
                           );
 
-                          if (["dae", "daed"].includes(metadata.repo)) {
-                            // request review from qa team
-                            await tracer.startActiveSpan(
-                              "app.handler.pull_request.opened.assign_labels.add_labels.not_yet_tested.request_qa_review",
-                              {
-                                attributes: {
-                                  functionality: "request review from qa team",
-                                  condition: "ONLY applicable in [dae,daed]",
-                                },
-                              },
-                              async (span: Span) => {
-                                // https://octokit.github.io/rest.js/v18#pulls-create-review-request
-                                await extension.octokit.rest.pulls.requestReviewers(
-                                  {
-                                    owner: metadata.owner,
-                                    repo: metadata.repo,
-                                    pull_number: metadata.pull_request.number,
-                                    team_reviewers: ["qa"],
-                                  }
-                                );
+                          // if (["dae", "daed"].includes(metadata.repo)) {
+                          //   // request review from qa team
+                          //   await tracer.startActiveSpan(
+                          //     "app.handler.pull_request.opened.assign_labels.add_labels.not_yet_tested.request_qa_review",
+                          //     {
+                          //       attributes: {
+                          //         functionality: "request review from qa team",
+                          //         condition: "ONLY applicable in [dae,daed]",
+                          //       },
+                          //     },
+                          //     async (span: Span) => {
+                          //       // https://octokit.github.io/rest.js/v18#pulls-create-review-request
+                          //       await extension.octokit.rest.pulls.requestReviewers(
+                          //         {
+                          //           owner: metadata.owner,
+                          //           repo: metadata.repo,
+                          //           pull_number: metadata.pull_request.number,
+                          //           team_reviewers: ["qa"],
+                          //         }
+                          //       );
 
-                                span.end();
-                              }
-                            );
-                          }
+                          //       span.end();
+                          //     }
+                          //   );
+                          // }
                         }
 
                         span.end();

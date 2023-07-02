@@ -31,8 +31,10 @@ const prTitle1 = "fixture(context): some title";
 const prTitle2 = "fix(context): some title";
 const prTitle3 = "docs(context): some title";
 const prTitle4 = "docu(context): some title";
+const prTitle5 = "feat: display daed version in header";
 
 console.log(testLabelRegex(prTitle1));
 console.log(testLabelRegex(prTitle2));
 console.log(testLabelRegex(prTitle3));
 console.log(testLabelRegex(prTitle4));
+console.log(testLabelRegex(prTitle5));
