@@ -135,7 +135,7 @@ async function handler(
   // case_#2 create a pull_request when branch sync-upstream is created and pushed to daed (remote)
   if (
     context.payload.before == "0000000000000000000000000000000000000000" &&
-    context.payload.repository.name == "daed-1" &&
+    context.payload.repository.name == "daed" &&
     context.payload.ref.split("/")[2] == daedSyncBranch
   ) {
     await tracer.startActiveSpan(
@@ -244,7 +244,7 @@ async function handler(
                         owner: metadata.owner,
                         repo: metadata.repo,
                         issue_number: res.data.number,
-                        assignees: ["daebot"],
+                        assignees: ["dae-bot[staging]"],
                       });
                       span.end();
                     }
@@ -271,18 +271,6 @@ async function handler(
               attributes: { functionality: "automatically merge pull_request" },
             },
             async (span: Span) => {
-              // 1.4.1 create a pull_request review
-              // https://octokit.github.io/rest.js/v18#pulls-create-review
-              // https://docs.github.com/en/rest/pulls/reviews?apiVersion=2022-11-28#create-a-review-for-a-pull-request
-              await extension.octokit.pulls.createReview({
-                repo: metadata.repo,
-                owner: metadata.owner,
-                pull_number: pr.number,
-                body: "🛫 All good.",
-                commit_id: pr.sha,
-                event: "APPROVE",
-              });
-              // 1.4.2 merge pull_request
               // https://octokit.github.io/rest.js/v18#pulls-merge
               await extension.octokit.pulls.merge({
                 repo: metadata.repo,
@@ -290,11 +278,33 @@ async function handler(
                 pull_number: pr.number,
                 merge_method: "squash",
               });
+              const msg = "🛫 All good, merge to main.";
+              app.log.info(msg);
+              span.addEvent(msg);
+              await extension.tg.sendMsg(msg, [
+                process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
+              ]);
               span.end();
             }
           );
 
-          // 1.5 audit event
+          // 1.5 delete sync-upstream branch
+          await tracer.startActiveSpan(
+            "app.handler.push.daed_sync_upstream.create_pr.audit_event",
+            { attributes: { functionality: "delete sync-upstream branch" } },
+            async (span: Span) => {
+              // https://octokit.github.io/rest.js/v18#git-delete-ref
+              // https://docs.github.com/en/rest/git#delete-a-reference
+              await extension.octokit.rest.git.deleteRef({
+                owner: "daeuniverse",
+                repo: "daed",
+                ref: `heads/sync-upstream`,
+              });
+              span.end();
+            }
+          );
+
+          // 1.6 audit event
           await tracer.startActiveSpan(
             "app.handler.push.daed_sync_upstream.create_pr.audit_event",
             { attributes: { functionality: "audit event" } },
