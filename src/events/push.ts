@@ -290,15 +290,20 @@ async function handler(
 
           // 1.5 delete sync-upstream branch
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.create_pr.audit_event",
-            { attributes: { functionality: "delete sync-upstream branch" } },
+            "app.handler.push.daed_sync_upstream.create_pr.delete_remote_branch",
+            {
+              attributes: {
+                functionality: "delete sync-upstream branch",
+                branch: `heads/${daedSyncBranch}`,
+              },
+            },
             async (span: Span) => {
               // https://octokit.github.io/rest.js/v18#git-delete-ref
               // https://docs.github.com/en/rest/git#delete-a-reference
               await extension.octokit.rest.git.deleteRef({
                 owner: "daeuniverse",
                 repo: "daed",
-                ref: `heads/sync-upstream`,
+                ref: `heads/${daedSyncBranch}`,
               });
               span.end();
             }
