@@ -34,7 +34,7 @@ async function handler(
   await tracer.startActiveSpan(
     "app.handler.star.created.event_logging",
     async (span: Span) => {
-      const logs = `received a star.created event: ${JSON.stringify(repo)}`;
+      const logs = `received a star.created event: ${JSON.stringify(metadata)}`;
       app.log.info(logs);
       span.addEvent(logs);
       span.end();
@@ -45,16 +45,7 @@ async function handler(
     "app.handler.star.created",
     async (span: Span) => {
       try {
-        // metadata
-        await tracer.startActiveSpan(
-          "app.handler.star.created.metadata)",
-          { attributes: { metadata: JSON.stringify(metadata) } },
-          async (span: Span) => {
-            span.end();
-          }
-        );
-
-        // 1.2 get current stargazers_count from kv
+        // 1.1 get current stargazers_count from kv
         const actualStars = await tracer.startActiveSpan(
           "app.handler.star.created.get_current_stargazers_count)",
           async (span: Span) => {
@@ -72,7 +63,7 @@ async function handler(
         }
 
         if (metadata.stargazers_count > Number.parseInt(actualStars)) {
-          // 1.3 store current stargazers_count to kv
+          // 1.2 store current stargazers_count to kv
           await tracer.startActiveSpan(
             "app.handler.star.created.increment_stargazers_count",
             {
@@ -82,11 +73,12 @@ async function handler(
             },
             async (span: Span) => {
               await kv.set(`stars.${repo.name}`, metadata.stargazers_count);
+              span.addEvent(`count: ${metadata.stargazers_count}`);
               span.end();
             }
           );
 
-          // 1.4 audit event
+          // 1.3 audit event
           await tracer.startActiveSpan(
             "app.handler.star.created.audit_event",
             { attributes: { functionality: "audit event" } },

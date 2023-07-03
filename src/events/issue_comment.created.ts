@@ -114,7 +114,7 @@ async function handler(
         sha: headCommit.sha,
       });
 
-      // 1.1.2 get current CHANGELOGS.md content
+      // 1.1.3 get current CHANGELOGS.md content
       // https://octokit.github.io/rest.js/v18#repos-get-content
       const originalCopy = await context.octokit.repos
         .getContent({
@@ -128,7 +128,7 @@ async function handler(
           sha: res.data.sha,
         }));
 
-      // 1.1.3 replace placeHolder with new changelogs for the new release
+      // 1.1.4 replace placeHolder with new changelogs for the new release
       var changelogs = originalCopy.content.replace(
         tocPlaceHolder,
         `
@@ -152,7 +152,7 @@ ${contentPlaceHolder}
 
 > Release date: ${releaseDate}
 
-${context.payload.issue.body!.split("<!-- BEGIN CHANGELOGS -->")[1]}
+${context.payload.issue.body.split("<!-- BEGIN CHANGELOGS -->")[1]}
 `.trim()
       );
 
