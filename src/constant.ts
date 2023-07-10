@@ -8,12 +8,12 @@ export const defaultLables = [
   "patch",
   "ci",
   "optimize",
-  "chore",
   "refactor",
   "style",
   "doc",
   "docs",
   "fixture",
+  "chore",
 ];
 
-export const strictLabels = defaultLables.slice(0, -4);
+export const strictLabels = defaultLables.slice(0, -5);
