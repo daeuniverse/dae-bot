@@ -244,7 +244,7 @@ async function handler(
                         owner: metadata.owner,
                         repo: metadata.repo,
                         issue_number: res.data.number,
-                        assignees: ["dae-bot[staging]"],
+                        assignees: ["daebot"],
                       });
                       span.end();
                     }
