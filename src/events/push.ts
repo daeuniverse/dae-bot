@@ -35,24 +35,28 @@ async function handler(
     }
   );
 
-  // case_#1 trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main
+  // case_#1 trigger sync_target.sync-upstream workflow if new changes are pushed to [dae|dae-wing] origin/main
   if (
     context.payload.ref == "refs/heads/main" &&
-    context.payload.repository.name == "dae-wing"
+    ["dae", "dae-wing"].includes(context.payload.repository.name)
   ) {
+    // set sync_target [dae-wing|daed] based on the source commit [dae|dae-wing], respectively
+    const syncTarget =
+      context.payload.repository.name == "dae" ? "dae-wing" : "daed";
+
     await tracer.startActiveSpan(
-      "app.handler.push.daed_sync_upstream.trigger_workflow",
+      `app.handler.push.${syncTarget}_sync_upstream.trigger_workflow`,
       {
         attributes: {
-          case: "trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main",
+          case: `trigger ${syncTarget}.sync-upstream workflow if new changes are pushed to ${repo.name} origin/main`,
         },
       },
       async (span: Span) => {
         try {
           // 1.1 construct metadata from payload
           const metadata = {
-            repo: "daed",
-            owner: context.payload.organization?.login as string,
+            repo: repo.name,
+            owner: repo.owner,
             author: context.payload.sender.login,
             default_branch: context.payload.repository.default_branch,
             html_url: context.payload.repository.html_url,
@@ -60,19 +64,24 @@ async function handler(
           };
 
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.trigger_workflow.metadata",
+            `app.handler.push.${syncTarget}_sync_upstream.trigger_workflow.metadata`,
+            {
+              attributes: {
+                metadata: JSON.stringify(metadata),
+                syncTarget,
+              },
+            },
             async (span: Span) => {
-              span.setAttribute("metadata", JSON.stringify(metadata));
               span.end();
             }
           );
 
-          // 1.2 trigger daed sync-upstream-source workflow
+          // 1.2 trigger sync_target sync-upstream-source workflow
           const latestRunUrl = await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.trigger_workflow.trigger",
+            `app.handler.push.${syncTarget}_sync_upstream.trigger_workflow.trigger`,
             {
               attributes: {
-                functionality: "trigger daed sync-upstream-source workflow",
+                functionality: `trigger ${syncTarget} sync-upstream-source workflow`,
               },
             },
             async (span: Span) => {
