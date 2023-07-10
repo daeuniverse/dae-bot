@@ -38,7 +38,7 @@ async function handler(
   // case_#1 trigger daed.sync-upstream workflow if new changes are pushed to dae-wing origin/main
   if (
     context.payload.ref == "refs/heads/main" &&
-    context.payload.repository.name == "ci-bot-experiment"
+    context.payload.repository.name == "dae-wing"
   ) {
     await tracer.startActiveSpan(
       "app.handler.push.daed_sync_upstream.trigger_workflow",
