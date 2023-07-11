@@ -22,7 +22,13 @@ async function handler(
   extension: Extension
 ): Promise<Result> {
   const head_commit = JSON.stringify(context.payload?.head_commit);
-  const daedSyncBranch = "sync-upstream";
+  const syncBranch = "sync-upstream";
+  // set syncSource [dae|dae-wing] based on the source commit [dae-wing|daed], respectively
+  const syncSource =
+    context.payload.repository.name == "dae-wing" ? "dae" : "dae-wing";
+  // set syncTarget [dae-wing|daed] based on the source commit [dae|dae-wing], respectively
+  const syncTarget =
+    context.payload.repository.name == "dae" ? "dae-wing" : "daed";
 
   // instantiate span
   await tracer.startActiveSpan(
@@ -40,10 +46,6 @@ async function handler(
     context.payload.ref == "refs/heads/main" &&
     ["dae", "dae-wing"].includes(context.payload.repository.name)
   ) {
-    // set sync_target [dae-wing|daed] based on the source commit [dae|dae-wing], respectively
-    const syncTarget =
-      context.payload.repository.name == "dae" ? "dae-wing" : "daed";
-
     await tracer.startActiveSpan(
       `app.handler.push.${syncTarget}_sync_upstream.trigger_workflow`,
       {
@@ -89,14 +91,13 @@ async function handler(
               // https://docs.github.com/en/rest/actions/workflows?apiVersion=2022-11-28#create-a-workflow-dispatch-event
               const result = await extension.octokit.actions
                 .createWorkflowDispatch({
+                  repo: syncTarget,
                   owner: metadata.owner,
-                  repo: metadata.repo,
                   workflow_id: "sync-upstream.yml",
                   ref: metadata.default_branch,
                   inputs: {
-                    "wing-head": metadata.default_branch,
-                    "wing-sync-message": "chore(sync): upgrade dae-wing",
-                    "pr-branch": daedSyncBranch,
+                    "submodule-name":
+                      metadata.repo === "dae" ? "dae-core" : "wing",
                   },
                 })
                 .then(() =>
@@ -104,7 +105,7 @@ async function handler(
                   // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
                   extension.octokit.actions
                     .listWorkflowRuns({
-                      owner: metadata.owner,
+                      owner: syncTarget,
                       repo: metadata.repo,
                       workflow_id: "sync-upstream.yml",
                       per_page: 1,
@@ -118,10 +119,10 @@ async function handler(
 
           // 1.4 audit event
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.trigger_workflow.audit_event",
+            `app.handler.push.${syncTarget}_sync_upstream.trigger_workflow.audit_event`,
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
-              const msg = `🏗️ a new commit was pushed to dae-wing (${metadata.default_branch}); dispatched ${daedSyncBranch} workflow for daed; url: ${latestRunUrl}`;
+              const msg = `🏗️ a new commit was pushed to ${repo.name} (${metadata.default_branch}); dispatched ${syncBranch} workflow for ${syncTarget}; url: ${latestRunUrl}`;
               app.log.info(msg);
               await extension.tg.sendMsg(msg, [
                 process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
@@ -141,53 +142,57 @@ async function handler(
     );
   }
 
-  // case_#2 create a pull_request when branch sync-upstream is created and pushed to daed (remote)
+  // case_#2 create a pull_request when branch sync-upstream is created and pushed to syncTarget (remote)
   if (
     context.payload.before == "0000000000000000000000000000000000000000" &&
-    context.payload.repository.name == "daed" &&
-    context.payload.ref.split("/")[2] == daedSyncBranch
+    ["dae-wing", "daed"].includes(context.payload.repository.name) &&
+    context.payload.ref.split("/")[2] == syncBranch
   ) {
     await tracer.startActiveSpan(
-      "app.handler.push.daed_sync_upstream.create_pr",
+      `app.handler.push.${syncTarget}_sync_upstream.create_pr`,
+      {
+        attributes: {
+          case: `create a pull_request when branch sync-upstream is created and pushed to ${syncTarget} (remote)`,
+        },
+      },
       async (span: Span) => {
-        span.setAttributes({
-          case: "create a pull_request when branch sync-upstream is created and pushed to daed (remote)",
-        });
         try {
           // 1.1 construct metadata from payload
           const metadata = {
-            repo: context.payload.repository.name,
-            owner: context.payload.organization?.login as string,
+            repo: repo.name,
+            owner: repo.owner,
             author: context.payload.sender.login,
             default_branch: context.payload.repository.default_branch,
             head_branch: context.payload.ref.split("/")[2],
           };
 
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.create_pr.metadata",
-            async (span: Span) => {
-              span.setAttributes({
+            `app.handler.push.${repo.name}_sync_upstream.create_pr.metadata`,
+            {
+              attributes: {
                 metadata: JSON.stringify(metadata),
-                case: "create a pull_request when branch sync-upstream is created and pushed to daed (remote)",
-              });
+                syncTarget,
+              },
+            },
+            async (span: Span) => {
               span.end();
             }
           );
 
           // 1.2 fetch latest sync-upstream workflow run
           const latestWorkflowRun = await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.create_pr.fetch_latest_workflow_run",
+            `app.handler.push.${repo.name}_sync_upstream.create_pr.fetch_latest_workflow_run`,
             {
               attributes: {
-                functionality: "fetch latest sync-upstream workflow run",
+                functionality: "fetch latest ${syncBranch} workflow run",
               },
             },
             async (span: Span) => {
               // https://octokit.github.io/rest.js/v18#actions-list-workflow-runs
               const result = await extension.octokit.actions
                 .listWorkflowRuns({
-                  owner: metadata.owner,
                   repo: metadata.repo,
+                  owner: metadata.owner,
                   workflow_id: "sync-upstream.yml",
                   per_page: 1,
                 })
@@ -198,21 +203,20 @@ async function handler(
           );
 
           // 1.3 create a pull_request with head (sync-upstream) and base (main) for daed
-          const msg = `⏳ daed (origin/${metadata.default_branch}) is currently out-of-sync to dae-wing (origin/${metadata.default_branch}); changes are proposed by @daebot in actions - ${latestWorkflowRun}`;
+          const msg = `⏳ ${repo.name} (origin/${metadata.default_branch}) is currently out-of-sync to ${syncSource} (origin/${metadata.default_branch}); changes are proposed by @daebot in actions - ${latestWorkflowRun}`;
           const pr = await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.create_pr.create",
+            `app.handler.push.${repo.name}_sync_upstream.create_pr.create`,
             {
               attributes: {
-                functionality:
-                  "create a pull_request with head (sync-upstream) and base (main) for daed",
+                functionality: `create a pull_request with head (${syncBranch}) and base (${metadata.default_branch}) for ${repo.name}`,
               },
             },
             async (span: Span) => {
               // https://octokit.github.io/rest.js/v18#pulls-create
               return await extension.octokit.pulls
                 .create({
-                  owner: metadata.owner,
                   repo: metadata.repo,
+                  owner: metadata.owner,
                   head: metadata.head_branch,
                   base: metadata.default_branch,
                   title: "chore(sync): keep upstream source up-to-date",
@@ -221,7 +225,7 @@ async function handler(
                 .then((res) => {
                   // 1.3.1 add labels
                   tracer.startActiveSpan(
-                    "app.handler.push.daed_sync_upstream.create_pr.pr.add_labels",
+                    `app.handler.push.${repo.name}_sync_upstream.create_pr.pr.add_labels`,
                     {
                       attributes: {
                         functionality: "add labels",
@@ -229,19 +233,20 @@ async function handler(
                     },
                     async (span: Span) => {
                       // https://octokit.github.io/rest.js/v18#issues-add-labels
-                      extension.octokit.issues.addLabels({
-                        owner: metadata.owner,
+                      await extension.octokit.issues.addLabels({
                         repo: metadata.repo,
+                        owner: metadata.owner,
                         issue_number: res.data.number,
                         labels: ["automated-pr", "chore"],
                       });
+
                       span.end();
                     }
                   );
 
                   // 1.3.2 add assignee
                   tracer.startActiveSpan(
-                    "app.handler.push.daed_sync_upstream.create_pr.pr.add_assignee",
+                    `app.handler.push.${repo.name}_sync_upstream.create_pr.pr.add_assignee`,
                     {
                       attributes: {
                         functionality: "add assignee",
@@ -255,6 +260,7 @@ async function handler(
                         issue_number: res.data.number,
                         assignees: ["daebot"],
                       });
+
                       span.end();
                     }
                   );
@@ -275,7 +281,7 @@ async function handler(
 
           // 1.4 automatically merge pull_request
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.create_pr.auto_merge_pr",
+            `app.handler.push.${repo.name}_sync_upstream.create_pr.auto_merge_pr`,
             {
               attributes: { functionality: "automatically merge pull_request" },
             },
@@ -293,34 +299,36 @@ async function handler(
               await extension.tg.sendMsg(msg, [
                 process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
               ]);
+
               span.end();
             }
           );
 
           // 1.5 delete sync-upstream branch
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.create_pr.delete_remote_branch",
+            `app.handler.push.${repo.name}_sync_upstream.create_pr.delete_remote_branch`,
             {
               attributes: {
-                functionality: "delete sync-upstream branch",
-                branch: `heads/${daedSyncBranch}`,
+                functionality: `delete ${syncBranch} branch`,
+                branch: `heads/${syncBranch}`,
               },
             },
             async (span: Span) => {
               // https://octokit.github.io/rest.js/v18#git-delete-ref
               // https://docs.github.com/en/rest/git#delete-a-reference
               await extension.octokit.rest.git.deleteRef({
-                owner: "daeuniverse",
-                repo: "daed",
-                ref: `heads/${daedSyncBranch}`,
+                repo: metadata.repo,
+                owner: metadata.owner,
+                ref: `heads/${syncBranch}`,
               });
+
               span.end();
             }
           );
 
           // 1.6 audit event
           await tracer.startActiveSpan(
-            "app.handler.push.daed_sync_upstream.create_pr.audit_event",
+            `app.handler.push.${repo.name}_sync_upstream.create_pr.audit_event`,
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
               app.log.info(msg);
