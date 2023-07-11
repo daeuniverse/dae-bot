@@ -108,6 +108,7 @@ async function handler(
                     })
                     .then((res) => res.data.workflow_runs[0].html_url)
                 );
+
               span.end();
               return result;
             }
@@ -141,7 +142,7 @@ async function handler(
   // case_#2 create a pull_request when branch sync-upstream is created and pushed to syncTarget (remote)
   if (
     context.payload.before == "0000000000000000000000000000000000000000" &&
-    ["dae-wing", "daed"].includes(context.payload.repository.name) &&
+    ["dae-wing", "daed", "daed-1"].includes(context.payload.repository.name) &&
     context.payload.ref.split("/")[2] == syncBranch
   ) {
     await tracer.startActiveSpan(
@@ -193,6 +194,7 @@ async function handler(
                   per_page: 1,
                 })
                 .then((res) => res.data.workflow_runs[0].html_url);
+
               span.end();
               return result;
             }
@@ -200,6 +202,7 @@ async function handler(
 
           // 1.3 create a pull_request with head (sync-upstream) and base (main) for daed
           const msg = `⏳ ${repo.name} (origin/${metadata.default_branch}) is currently out-of-sync to ${syncSource} (origin/${metadata.default_branch}); changes are proposed by @daebot in actions - ${latestWorkflowRun}`;
+
           const pr = await tracer.startActiveSpan(
             `app.handler.push.${repo.name}_sync_upstream.create_pr.create`,
             {
@@ -209,7 +212,7 @@ async function handler(
             },
             async (span: Span) => {
               // https://octokit.github.io/rest.js/v18#pulls-create
-              return await extension.octokit.pulls
+              const result = await extension.octokit.pulls
                 .create({
                   repo: metadata.repo,
                   owner: metadata.owner,
@@ -271,38 +274,40 @@ async function handler(
                   };
                 });
 
+              span.addEvent(JSON.stringify(result));
               span.end();
+              return result;
             }
           );
 
-          // 1.4 automatically merge pull_request
-          await tracer.startActiveSpan(
-            `app.handler.push.${repo.name}_sync_upstream.create_pr.auto_merge_pr`,
-            {
-              attributes: { functionality: "automatically merge pull_request" },
-            },
-            async (span: Span) => {
-              // https://octokit.github.io/rest.js/v18#pulls-merge
-              await extension.octokit.pulls.merge({
-                repo: metadata.repo,
-                owner: metadata.owner,
-                pull_number: pr.number,
-                merge_method: "squash",
-              });
-              const msg = "🛫 All good, merge to main.";
-              app.log.info(msg);
-              span.addEvent(msg);
-              await extension.tg.sendMsg(msg, [
-                process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
-              ]);
+          // 1.4 automatically merge pull_request if all required checks pass
+          // await tracer.startActiveSpan(
+          //   `app.handler.push.${repo.name}_sync_upstream.create_pr.pr.auto_merge_pr`,
+          //   {
+          //     attributes: { functionality: "automatically merge pull_request" },
+          //   },
+          //   async (span: Span) => {
+          //     // https://octokit.github.io/rest.js/v18#pulls-merge
+          //     await extension.octokit.pulls.merge({
+          //       repo: metadata.repo,
+          //       owner: metadata.owner,
+          //       pull_number: pr.number,
+          //       merge_method: "squash",
+          //     });
+          //     const msg = "🛫 All good, merge to main.";
+          //     app.log.info(msg);
+          //     span.addEvent(msg);
+          //     await extension.tg.sendMsg(msg, [
+          //       process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
+          //     ]);
 
-              span.end();
-            }
-          );
+          //     span.end();
+          //   }
+          // );
 
-          // 1.5 audit event
+          // 1.4 audit event
           await tracer.startActiveSpan(
-            `app.handler.push.${repo.name}_sync_upstream.create_pr.audit_event`,
+            `app.handler.push.${repo.name}_sync_upstream.create_pr.pr.audit_event`,
             { attributes: { functionality: "audit event" } },
             async (span: Span) => {
               app.log.info(msg);
@@ -310,6 +315,7 @@ async function handler(
                 process.env.TELEGRAM_DAEUNIVERSE_AUDIT_CHANNEL_ID!,
               ]);
               span.addEvent(msg);
+              span.addEvent(JSON.stringify(pr));
               span.end();
             }
           );
