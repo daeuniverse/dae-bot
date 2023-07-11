@@ -95,10 +95,6 @@ async function handler(
                   owner: metadata.owner,
                   workflow_id: "sync-upstream.yml",
                   ref: metadata.default_branch,
-                  inputs: {
-                    "submodule-name":
-                      metadata.repo === "dae" ? "dae-core" : "wing",
-                  },
                 })
                 .then(() =>
                   // 1.3 get latest workflow run metadata
