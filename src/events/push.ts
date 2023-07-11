@@ -142,7 +142,7 @@ async function handler(
   // case_#2 create a pull_request when branch sync-upstream is created and pushed to syncTarget (remote)
   if (
     context.payload.before == "0000000000000000000000000000000000000000" &&
-    ["dae-wing", "daed", "daed-1"].includes(context.payload.repository.name) &&
+    ["dae-wing", "daed"].includes(context.payload.repository.name) &&
     context.payload.ref.split("/")[2] == syncBranch
   ) {
     await tracer.startActiveSpan(
