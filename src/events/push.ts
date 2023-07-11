@@ -304,29 +304,7 @@ async function handler(
             }
           );
 
-          // 1.5 delete sync-upstream branch
-          await tracer.startActiveSpan(
-            `app.handler.push.${repo.name}_sync_upstream.create_pr.delete_remote_branch`,
-            {
-              attributes: {
-                functionality: `delete ${syncBranch} branch`,
-                branch: `heads/${syncBranch}`,
-              },
-            },
-            async (span: Span) => {
-              // https://octokit.github.io/rest.js/v18#git-delete-ref
-              // https://docs.github.com/en/rest/git#delete-a-reference
-              await extension.octokit.rest.git.deleteRef({
-                repo: metadata.repo,
-                owner: metadata.owner,
-                ref: `heads/${syncBranch}`,
-              });
-
-              span.end();
-            }
-          );
-
-          // 1.6 audit event
+          // 1.5 audit event
           await tracer.startActiveSpan(
             `app.handler.push.${repo.name}_sync_upstream.create_pr.audit_event`,
             { attributes: { functionality: "audit event" } },
